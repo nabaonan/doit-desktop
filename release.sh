@@ -135,15 +135,20 @@ open(p, 'w', encoding='utf-8').write(s)
 print('   Cargo.toml ->', ver)
 
 # Cargo.lock 里 [[package]] name = "doit-desktop" 的 version
+# 注意：追加新版本行后必须「吞掉」紧跟的原 version 行，否则同一块出现两个 version → TOML duplicate key
 p = 'src-tauri/Cargo.lock'
 s = open(p, encoding='utf-8').read()
 lines = s.split('\n')
-out, done = [], False
+out, done, skip = [], False, False
 for i, ln in enumerate(lines):
-    if not done and ln == 'name = "doit-desktop"' and i + 1 < len(lines) and lines[i+1].startswith('version'):
+    if skip:
+        skip = False
+        continue
+    if not done and ln == 'name = "doit-desktop"' and i + 1 < len(lines) and lines[i + 1].startswith('version'):
         out.append(ln)
         out.append(f'version = "{ver}"')
         done = True
+        skip = True          # 跳过原 version 行，避免重复键
         continue
     out.append(ln)
 open(p, 'w', encoding='utf-8').write('\n'.join(out))
