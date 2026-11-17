@@ -20,6 +20,7 @@ const syncMeta = computed(() => {
   switch (sync.kind) {
     case 'syncing': return { icon: 'cloud', label: '同步中…', tip: '正在与远程同步…' }
     case 'off': return { icon: 'cloud', label: '同步已关闭', tip: '同步已关闭 · 可在设置中开启' }
+    case 'ready': return { icon: 'cloud', label: '已开启暂未同步', tip: 'WebDAV 已开启 · 尚未验证连接，去设置页「测试连接」或同步' }
     case 'error': return { icon: 'cloud', label: '同步异常', tip: sync.error?.message ?? '同步失败' }
     case 'dirty': return { icon: 'cloudDirty', label: '有未同步更改 · 点击同步', tip: '有本地更改尚未同步 · 点击立即同步' }
     default: return { icon: 'cloudOk', label: '已与远程同步', tip: '已与远程同步 · 点击立即同步' }

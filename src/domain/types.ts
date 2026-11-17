@@ -6,7 +6,7 @@ export type ThemeName = 'light' | 'dark'
 export type SkinName = 'mint' | 'soft'
 export type StatsRange = 'week' | 'month' | 'year'
 export type PageId = 'today' | 'stats' | 'calendar' | 'settings'
-export type SyncStateKind = 'synced' | 'dirty' | 'syncing' | 'off' | 'error'
+export type SyncStateKind = 'synced' | 'dirty' | 'syncing' | 'off' | 'error' | 'ready'
 
 export interface Category {
   name: string

@@ -67,6 +67,9 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   /* 已与远程同步：薄荷绿常态 + 云中对钩 */
   .sync-status.synced .cloud{color:var(--mint)}
+  /* 已开启但尚未验证连接：灰显，不带对钩，区别于「已同步」 */
+  .sync-status.ready{opacity:.85}
+  .sync-status.ready .cloud{color:var(--ink-3)}
   /* 有本地更改、尚未与远程同步：琥珀色警示 + 云中上传箭头 + 呼吸小圆点 */
   .sync-status.dirty{border-color:color-mix(in srgb,var(--warn) 46%,var(--line));
     background:var(--warn-bg);color:var(--warn)}
@@ -84,6 +87,7 @@
   .sync-state{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700}
   .sync-state svg{width:17px;height:17px}
   .sync-state.synced{color:var(--mint-deep)}
+  .sync-state.ready{color:var(--ink-3)}
   .sync-state.dirty{color:var(--warn)}
   .sync-state.syncing{color:var(--ink-2)}
   .sync-state.off{color:var(--ink-3)}

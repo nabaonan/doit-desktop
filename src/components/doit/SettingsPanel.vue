@@ -136,7 +136,7 @@ async function checkUpdate(): Promise<void> {
         <label>同步状态</label>
         <span class="sync-state" :class="sync.kind">
           <Icon :name="sync.kind === 'synced' ? 'cloudOk' : sync.kind === 'dirty' ? 'cloudDirty' : 'cloud'" :size="17" />
-          {{ sync.kind === 'synced' ? '已与远程同步' : sync.kind === 'dirty' ? '有未同步更改' : sync.kind === 'syncing' ? '同步中…' : sync.kind === 'error' ? '同步异常' : '同步已关闭' }}
+          {{ sync.kind === 'synced' ? '已与远程同步' : sync.kind === 'ready' ? '已开启暂未同步' : sync.kind === 'dirty' ? '有未同步更改' : sync.kind === 'syncing' ? '同步中…' : sync.kind === 'error' ? '同步异常' : '同步已关闭' }}
         </span>
       </div>
       <div class="field">

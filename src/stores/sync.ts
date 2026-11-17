@@ -32,14 +32,18 @@ export const useSyncStore = defineStore('sync', () => {
   const ui = useUIStore()
   const syncing = ref(false)
   const error = ref<AppError | null>(null)
-  const lastSyncAt = ref<number | null>(Date.now())
+  const lastSyncAt = ref<number | null>(null)
   const manualOff = ref(false)
+  // 是否已验证连接 / 成功同步过：只有「测试连接成功」或「完成过一次同步」才置位。
+  // 开关已开但从未验证时，状态显示「已开启暂未同步」而不是误导性的「已与远程同步」。
+  const verified = ref(false)
   const progress = ref('')
 
   const kind = computed<SyncStateKind>(() => {
     if (manualOff.value || !settings.webdav.enabled) return 'off'
     if (error.value) return 'error'
     if (syncing.value) return 'syncing'
+    if (!verified.value) return 'ready'
     return tasks.dirty ? 'dirty' : 'synced'
   })
 
@@ -52,6 +56,7 @@ export const useSyncStore = defineStore('sync', () => {
   function markSynced(): void {
     tasks.markClean()
     error.value = null
+    verified.value = true
     lastSyncAt.value = Date.now()
   }
 
@@ -115,7 +120,13 @@ export const useSyncStore = defineStore('sync', () => {
 
   async function testConnection(config: WebDavConfig, password: string): Promise<string> {
     const result = await testWebDav(config, password)
-    if (!result.ok) error.value = { code: 'E_WEBDAV_AUTH', message: result.message }
+    if (!result.ok) {
+      error.value = { code: 'E_WEBDAV_AUTH', message: result.message }
+    } else {
+      // 测试通过才算验证过：只有此时才允许显示「已与远程同步」
+      error.value = null
+      verified.value = true
+    }
     return result.message
   }
 
