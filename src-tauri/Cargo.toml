@@ -1,0 +1,57 @@
+[package]
+name = "doit-desktop"
+version = "0.1.0"
+description = "doit 桌面端 companion（Vue 3 前端 + Tauri 2 壳）"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "doit_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.4", features = [] }
+
+[dependencies]
+# Tauri 2 稳定版（明确不使用 3.0-alpha）
+tauri = { version = "2.12.5", features = ["tray-icon"] }
+tauri-plugin-fs = "2.7.1"
+tauri-plugin-store = "2.5.1"
+tauri-plugin-dialog = "2.8.4"
+tauri-plugin-notification = "2.8.1"
+tauri-plugin-autostart = "2.7.0"
+tauri-plugin-updater = "2.14.1"
+tauri-plugin-single-instance = "2.5.5"
+tauri-plugin-window-state = "2.5.0"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["sync", "time"] }
+thiserror = "2"
+# 只记录阶段 / 错误码等非敏感信息；未启用全局 subscriber，
+# 避免第三方 crate 的 trace 日志把凭据带出。
+tracing = "0.1"
+
+# WebDAV：纯 Rust TLS（rustls），避免 Linux 上的 OpenSSL 系统依赖。
+# 默认关闭自签证书放行（danger_accept_invalid_certs(false)）。
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+
+# 系统钥匙串 / 凭据管理器（密码绝不落盘）。
+# keyring 4.x 的 `v1` feature 已在 crate 内部按 cfg 自动接入三平台后端：
+#   macOS   -> apple-native-keyring-store (Keychain)
+#   Windows -> windows-native-keyring-store (Credential Manager)
+#   Linux   -> dbus/zbus Secret Service
+# 这等价于 3.x 里手写 [target.'cfg(...)'.dependencies] 的
+# apple-native / windows-native / linux-native-sync-persistent，
+# 因此本工程无需再为 keyring 写 target 依赖。
+# v1 API（已查 keyring-4.2.0 源码确认）：
+#   Entry::new(service, user) -> Result<Entry>、set_password / get_password / delete_credential。
+keyring = { version = "4.2.0", features = ["v1"] }
+
+# open_external：跨平台调用系统浏览器；open crate 内部不走 shell，避免命令注入。
+open = "5"
+
+[features]
+default = []
+# 生产构建（无 dev server）所需，DO NOT REMOVE。
+custom-protocol = ["tauri/custom-protocol"]

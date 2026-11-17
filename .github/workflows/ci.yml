@@ -1,0 +1,36 @@
+name: CI
+
+# 普通提交（push main / PR）只做轻量校验：单元测试 + 前端构建。
+# 三平台出包仅由 release.yml（打 v* tag）触发，避免每次 push 都跑昂贵的 Tauri 构建。
+on:
+  push:
+    branches: [ 'main' ]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: 单元测试与前端构建
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安装前端依赖
+        run: npm ci
+
+      - name: 单元测试
+        run: npm test -- --run
+
+      - name: 类型检查 + 前端构建
+        run: npm run build

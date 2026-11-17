@@ -1,0 +1,124 @@
+/* 浮层层级约定：所有 Teleport / Reka Portal 内容挂在 body 直属层，祖先不得带 transform / filter */
+#overlay-host {
+  position: relative;
+  z-index: 90;
+}
+
+#ctx-host {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
+#ctx-host > * { pointer-events: auto; }
+
+/* Reka Portal 生成的内容脱离 scoped CSS，统一用全局令牌取色 */
+[data-reka-popper-content-wrapper],
+[data-reka-portal] { z-index: 60; }
+
+/* z-index：topbar 30 / qa-bar 20 / ctx 50 / modal 60 / toast 70 / chart-tip 90 */
+.ui-menu-content,
+.ui-popover-content,
+.ui-tooltip-content {
+  z-index: 60;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Reka ContextMenu 内容：Root/Portal/Content 由库定位，行与二级子菜单沿用原型观感 */
+.doit-ctx { min-width: 182px; padding: 7px; display: block; }
+.doit-ctx .ctx-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.doit-ctx .ctx-row:hover { background: var(--mint-soft); color: var(--mint-deep); }
+.doit-ctx .ctx-row.danger { color: var(--prio-high); }
+.doit-ctx .ctx-row svg { width: 16px; height: 16px; flex: 0 0 16px; }
+.doit-ctx .ctx-row .caret { margin-left: auto; opacity: .45; transform: rotate(-90deg); }
+.doit-ctx .submenu {
+  position: absolute;
+  left: 100%;
+  top: -7px;
+  margin-left: 7px;
+  min-width: 150px;
+  padding: 7px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  z-index: 2;
+}
+.doit-ctx .ctx-row.left .submenu { left: auto; right: 100%; margin-left: 0; margin-right: 7px; }
+.doit-ctx .ctx-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.doit-ctx .ctx-opt:hover { background: var(--mint-soft); color: var(--mint-deep); }
+.doit-ctx .ctx-opt.cur { color: var(--mint-deep); font-weight: 800; }
+.doit-ctx .ctx-opt .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; }
+
+/* Reka AlertDialog 删除确认 */
+.dlg-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(10, 20, 18, .45); backdrop-filter: blur(3px); }
+.dlg-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 61;
+  width: 410px;
+  max-width: 94vw;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+}
+.dlg-desc { font-size: 13.5px; line-height: 1.7; color: var(--ink-2); }
+.dlg-danger { background: var(--prio-high) !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Reka Switch 兼容原型 .switch 外观 */
+button.switch { border: none; padding: 0; display: block; }
+.switch-thumb {
+  position: absolute;
+  top: 2.5px;
+  left: 2.5px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: .2s;
+  box-shadow: var(--shadow-sm);
+}
+.switch.on .switch-thumb { left: 21.5px; }
+
+/* Reka DropdownMenu / Tooltip */
+.ui-dd-content {
+  z-index: 60;
+  min-width: 148px;
+  padding: 7px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  animation: pop .12s ease;
+}
+.ui-tooltip-content { padding: 7px 11px; font-size: 12px; font-weight: 600; }

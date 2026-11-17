@@ -1,0 +1,33 @@
+/* doit-desktop 设计令牌：由 prototype.html :root / [data-theme="dark"] 1:1 迁移 */
+
+  /* ============ 设计令牌（对齐手机端 Color.kt，视觉升级） ============ */
+  :root{
+    --mint:#3FBB9C; --mint-deep:#1E7D66; --mint-soft:#E8F7F1;
+    --ink:#16211F; --ink-2:#5A6B66; --ink-3:#93A39C; --line:#E6EDEA;
+    --card:#FFFFFF; --glass:rgba(255,255,255,.72);
+    --bg:#EEF4F1;
+    --prio-urgent:#E5484D; --prio-high:#F07B3F; --prio-normal:#4A90D9; --prio-low:#96A5A0;
+    --heat-0:#EAF0ED; --heat-1:#CDE9DF; --heat-2:#9BD8C4; --heat-3:#5FC2A4; --heat-4:#2E9C7C;
+    --warn:#F0A23B; --warn-bg:#FFF6E8;
+    --shadow-sm:0 1px 2px rgba(20,40,35,.05);
+    --shadow:0 6px 24px rgba(20,50,40,.07), 0 2px 6px rgba(20,50,40,.04);
+    --shadow-lg:0 18px 50px rgba(18,46,38,.16);
+    --radius:16px; --radius-sm:11px;
+    --tb-h:60px;
+    --heat-cell:13px; --heat-gap:5px;
+    --done-anim:#3FBB9C;
+  }
+  [data-theme="dark"]{
+    --mint:#46C7A6; --mint-deep:#7FE3C8; --mint-soft:#16302A;
+    --ink:#E8F1EE; --ink-2:#9FB0AA; --ink-3:#6B7B75; --line:#26322F;
+    --card:#19221F; --glass:rgba(25,34,31,.62);
+    --bg:#0C1316;
+    --prio-urgent:#FF6B6F; --prio-high:#FF9A6B; --prio-normal:#6FA8DC; --prio-low:#A9B5B0;
+    --heat-0:#1B2422; --heat-1:#1F3A33; --heat-2:#27584B; --heat-3:#34866F; --heat-4:#46C7A6;
+    --warn:#F0A23B; --warn-bg:#2A2415;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 8px 28px rgba(0,0,0,.4);
+    --shadow-lg:0 22px 60px rgba(0,0,0,.55);
+    --done-anim:#46C7A6;
+  }
+

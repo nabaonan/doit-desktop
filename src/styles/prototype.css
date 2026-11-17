@@ -1,0 +1,510 @@
+/* doit-desktop 布局样式：由 prototype.html <style> 原样迁移（同名 class，视觉零漂移） */
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}  /* html/body 均不滚动，滚动唯一发生在 #main */
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    /* background-attachment: fixed：三个渐变层固定在视口，页面滚动不再出现“首屏渐变 + 下方纯色”的割裂带 */
+    background:
+      radial-gradient(1200px 500px at 80% -10%, color-mix(in srgb,var(--mint) 12%, transparent), transparent 60%),
+      radial-gradient(900px 400px at -5% 110%, color-mix(in srgb,var(--mint) 9%, transparent), transparent 55%),
+      var(--bg);
+    background-attachment: fixed, fixed, scroll;
+    color:var(--ink); -webkit-font-smoothing:antialiased; font-size:14px;
+    /* body 锁定为视口高（100vh）且不滚动：flex 子 #main 承担唯一滚动，sticky 相对 #main 生效，吸顶稳定 */
+    display:flex; flex-direction:column; height:100vh; overflow:hidden;
+    transition:background .4s, color .3s;
+  }
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--ink-3)}
+  svg{display:block}
+
+  /* ============ 顶部玻璃导航（单行布局） ============ */
+  #topbar{position:sticky;top:0;z-index:30;height:var(--tb-h);
+    background:var(--glass); backdrop-filter:blur(20px) saturate(1.4);
+    -webkit-backdrop-filter:blur(20px) saturate(1.4);display:flex;align-items:center;overflow:hidden}
+  /* 一行内：logo(最左) → tab(左对齐成组) → 弹性空白 → 状态胶囊组(最右)，全程不换行。
+     宽度与 .page 对齐：全局 border-box，.page 总宽 1080（含 padding），故 tb-inner 也用 1080，
+     保证“待办左缘 = 导航左缘、进度右缘 = 内容右缘” */
+  .tb-inner{width:100%;max-width:1080px;margin:0 auto;min-width:0;box-sizing:border-box;padding:0 26px;
+    display:flex;align-items:center;gap:18px;flex-wrap:nowrap;white-space:nowrap}
+  .brand{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+  .brand .logo{width:34px;height:34px;border-radius:11px;
+    background:linear-gradient(135deg,var(--mint),var(--mint-deep));
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:17px;
+    box-shadow:0 4px 14px color-mix(in srgb,var(--mint) 40%,transparent)}
+  .brand b{font-size:16px;letter-spacing:.01em}
+  .brand small{display:block;color:var(--ink-3);font-weight:400;font-size:10.5px}
+  /* tab 与胶囊同高 38px，保证同一水平中线对齐；空间不足时 tab 组内部横向滚动，绝不折行 */
+  .tb-nav{display:flex;align-items:center;gap:6px;flex:0 1 auto;min-width:0;
+    flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .tb-nav::-webkit-scrollbar{display:none}
+  .tb-nav button{position:relative;height:38px;box-sizing:border-box;flex:0 0 auto;
+    border:none;background:transparent;color:var(--ink-2);
+    padding:0 15px;border-radius:11px;cursor:pointer;font-size:14px;font-weight:500;
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;transition:.18s}
+  .tb-nav button svg{width:18px;height:18px;flex:0 0 18px}
+  .tb-nav button:hover{background:var(--mint-soft);color:var(--mint-deep)}
+  /* 选中态仅用背景/字重表达，不再使用下方指示横线 */
+  .tb-nav button.active{background:var(--mint-soft);color:var(--mint-deep);font-weight:700}
+  /* 顶部胶囊组：所有胶囊统一尺寸（同高 / 同圆角 / 同内边距 / 同基线） */
+  .tb-pills{display:flex;align-items:center;gap:10px;flex:0 0 auto;margin-left:auto;
+    flex-wrap:nowrap;white-space:nowrap}
+  .tb-pill{height:38px;box-sizing:border-box;display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;
+    padding:0 13px;border:1px solid var(--line);border-radius:19px;background:var(--card);
+    color:var(--ink-2);font-size:12.5px;font-weight:600;white-space:nowrap;transition:.18s}
+  .tb-pill.clickable{cursor:pointer}
+  .tb-pill.clickable:hover{border-color:var(--mint);background:var(--mint-soft);color:var(--mint-deep)}
+  .tb-dp .wd{color:var(--ink-3);font-weight:400;margin-left:4px}
+  /* 日期 + 今日进度合并胶囊：日期文字 | 竖分隔 | 含百分比进度环 */
+  .tb-dp{gap:9px;border-radius:19px}
+  .tb-dp-sep{width:1px;height:16px;background:var(--line);margin:0 1px}
+  .tb-dp .ring-wrap{margin:0}
+  .tb-dp .ring-sm svg{width:30px;height:30px}
+  .ring-pct{font-size:11px;font-weight:800;fill:var(--ink)}
+  .sync-status .cloud{width:18px;height:18px;color:var(--mint);flex:0 0 18px}
+  .sync-status.spin .cloud{animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* 已与远程同步：薄荷绿常态 + 云中对钩 */
+  .sync-status.synced .cloud{color:var(--mint)}
+  /* 有本地更改、尚未与远程同步：琥珀色警示 + 云中上传箭头 + 呼吸小圆点 */
+  .sync-status.dirty{border-color:color-mix(in srgb,var(--warn) 46%,var(--line));
+    background:var(--warn-bg);color:var(--warn)}
+  .sync-status.dirty .cloud{color:var(--warn)}
+  .sync-status.dirty .txt{font-weight:700}
+  .sync-status.dirty::before{content:'';width:6px;height:6px;border-radius:50%;flex:0 0 6px;
+    background:var(--warn);animation:syncPulse 1.6s ease-in-out infinite}
+  @keyframes syncPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+  .sync-status.dirty.clickable:hover{border-color:var(--warn);
+    background:color-mix(in srgb,var(--warn) 18%,var(--card));color:var(--warn)}
+  /* 同步关闭：灰显，不带对钩 */
+  .sync-status.off{opacity:.62}
+  .sync-status.off .cloud{color:var(--ink-3)}
+  /* 设置页内的同步状态行 */
+  .sync-state{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700}
+  .sync-state svg{width:17px;height:17px}
+  .sync-state.synced{color:var(--mint-deep)}
+  .sync-state.dirty{color:var(--warn)}
+  .sync-state.syncing{color:var(--ink-2)}
+  .sync-state.off{color:var(--ink-3)}
+
+  /* ============ 主内容 ============ */
+  /* 所有组件包在 #app 内：需自行承担 flex 列布局，使 #main 高度被限制到视口剩余、其内滚动 */
+  #app{display:flex;flex-direction:column;height:100%;min-height:0}
+  #main{flex:1;overflow-y:auto;min-height:0}  /* 唯一滚动容器（body 已 overflow:hidden），min-height:0 保证 flex 内可收缩滚动 */
+  .page{max-width:1080px;margin:0 auto;padding:30px 26px 40px;animation:fadeUp .35s ease both}
+  .page-today{padding-bottom:104px}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes qaIn{from{opacity:0}to{opacity:1}}
+  /* 同页局部刷新（内联新增/提交/勾选）不重播整页与列表入场动画，避免闪烁 */
+  body.quiet-render .page,
+  body.quiet-render .qa-bar{animation:none}
+  .kicker{font-size:12px;color:var(--mint-deep);font-weight:700;letter-spacing:.06em}
+  .page h1{font-size:27px;margin:5px 0 3px;display:flex;align-items:center;gap:14px;font-weight:750}
+  .sub{color:var(--ink-3);font-size:13px;margin-bottom:16px}
+  .filterbar{display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:5px;scrollbar-width:thin}
+  .filterbar .chip{flex:0 0 auto}
+  .filterbar::-webkit-scrollbar{height:5px}
+  .filterbar::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+  .filterbar::-webkit-scrollbar-track{background:transparent}
+  /* 分类筛选吸顶：滚动发生在 #main（body overflow:hidden），其内容顶部即顶栏底部。
+     胶囊距顶栏保留 12px 间距（避免贴在一起）：由容器上下相等的内边距提供，初始与吸顶一致（top:0）。
+     上下内边距保持相等（各 12px，padding-block 独立属性，不被断点 padding-inline 覆盖）；
+     背景使用与页面完全一致的纯 var(--bg)，不使用半透明 / 毛玻璃 */
+  .filter-sticky,.range-sticky{position:sticky;top:0;z-index:20;
+    margin-inline:-26px;padding-block:12px;padding-inline:26px;
+    background:var(--bg)}
+  /* 今日页 / 统计页：分类条与日期切换条紧贴顶部导航（无距离），吸顶时同样贴顶 */
+  .page-today{padding-top:0}
+  .page-today .filterbar{margin:0}
+  .page-stats{padding-top:0}
+  /* 首页：分类 tab 切换区与任务列表共用同一左边界，随 .page 的基准线一起对齐 */
+  .page-today .filterbar,.page-today .task-group{margin-left:0;padding-left:0}
+  .chip{border:1px solid var(--line);background:var(--card);color:var(--ink-2);
+    padding:7px 14px;border-radius:20px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;transition:.15s}
+  .chip:hover{border-color:var(--mint);color:var(--mint-deep)}
+  /* 选中态不加投影：filterbar 横向滚动容器会裁掉投影，纯色底 + 白字已足够醒目 */
+  .chip.active{background:var(--mint);color:#fff;border-color:var(--mint);
+    text-shadow:0 1px 2px rgba(0,0,0,.2)}  /* 浅色分类底上白字仍保持清晰 */
+  .chip .cat-dot{width:8px;height:8px;border-radius:50%}
+  /* 添加分类：虚线按钮，与实心分类胶囊同高、同一行 */
+  .chip-add{border:1px dashed var(--ink-3);background:transparent;color:var(--ink-2);
+    font-family:inherit;white-space:nowrap}
+  .chip-add:hover{border-color:var(--mint);color:var(--mint-deep);background:var(--mint-soft)}
+  .chip-add-plus{font-size:16px;line-height:1;font-weight:500;margin-right:1px}
+
+  /* ============ 任务卡片 ============ */
+  .task{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:10px 16px;margin-bottom:0;box-shadow:var(--shadow-sm);position:relative;transition:.2s;animation:fadeUp .3s both}
+  .task-group{margin-bottom:12px}  /* 相邻同级任务间距 12px（顶级/子级/嵌套一致，避免紧贴） */
+  .task:hover{box-shadow:var(--shadow);transform:translateY(-2px);border-color:color-mix(in srgb,var(--mint) 35%,var(--line))}
+  .task.done{opacity:.6}
+  .task-row{display:flex;align-items:center;gap:13px}
+  /* 圆形勾选控件：外圈恒为纯圆；未完成空心圆，完成态圆底 + 白色 SVG 曲线对勾（无矩形 / 无伪元素方框） */
+  .check-dot{width:23px;height:23px;border-radius:9999px;border:2px solid var(--ink-3);flex:0 0 23px;
+    box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;
+    cursor:pointer;transition:.18s;background:var(--card);color:#fff}
+  .check-dot .check-mark{width:15px;height:15px;display:block;pointer-events:none}
+  .subtask .check-dot .check-mark{width:15px;height:15px}  /* 父/子勾选圈同尺寸：对勾也统一 15px */
+  .check-dot:hover{border-color:var(--mint);transform:scale(1.08)}
+  .check-dot:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+  .check-dot.on{background:var(--done-anim);border-color:transparent}
+  /* 含子任务的父任务：勾选圈只读，完成态由子任务推导，不接受直接完成。
+     未完成态虚线圈用 SVG stroke-dasharray 绘制（.dash-circle），CSS 边框置透明；
+     这样跨平台（WebKit/Blink）虚线均匀一致，不会出现稀疏长弧。 */
+  .check-dot.readonly{cursor:default;opacity:.72}
+  .check-dot.readonly:hover{transform:none}
+  /* 只读虚线圈：去掉 2px 透明边框，否则 SVG 只按 19px 内容框渲染，视觉上比 23px 实线圈小一圈。
+     r=10.8 + stroke 2.2 的外径 23.8/24，配合 23px 容器后与实线圈外径一致。 */
+  .check-dot.dash-circle{border:0}
+  .check-dot.dash-circle:hover{border:0}
+  .check-dot .dash-ring{width:100%;height:100%;display:block;color:var(--ink-3)}
+  .check-dot.on.readonly{border-color:transparent;opacity:1}
+  .task-body{flex:1;min-width:0;cursor:inherit;display:flex;flex-direction:column;justify-content:center;
+    align-self:stretch;gap:6px}
+  /* 单击卡片任意位置切换展开 / 收缩：仅含子任务的卡片可点，勾选圈/优先级/展开按钮仍各自独立 */
+  .task.has-subs,.subtask.has-subs{cursor:pointer}
+  .task.has-subs .task-body,.subtask.has-subs .task-body{cursor:pointer}
+  .task-title{font-size:16px;font-weight:600;line-height:1.4;word-break:break-word}
+  .task-title.done{text-decoration:line-through;color:var(--ink-3)}
+  /* 卡片收紧为单行：分类标签并入右侧操作行；第二行仅承载月历完成时间与内联编辑提示 */
+  .task-sub{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap;text-align:right}
+  .prio-tag{font-size:11px;padding:2px 9px;border-radius:7px;font-weight:700;display:inline-flex;align-items:center;gap:5px}
+  .prio-dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px;background:currentColor}
+  .prio-urgent{color:var(--prio-urgent);background:color-mix(in srgb,var(--prio-urgent) 14%,transparent)}
+  .prio-high{color:var(--prio-high);background:color-mix(in srgb,var(--prio-high) 14%,transparent)}
+  .prio-normal{color:var(--prio-normal);background:color-mix(in srgb,var(--prio-normal) 14%,transparent)}
+  .prio-low{color:var(--prio-low);background:color-mix(in srgb,var(--prio-low) 14%,transparent)}
+  /* 卡片内优先级只读：修改入口统一为右键菜单 */
+  .prio-readonly{cursor:default;white-space:nowrap;flex:0 0 auto;font-family:inherit}
+  /* 内联编辑：标题原地变为输入框，不弹任何对话框 */
+  .inline-edit-input{width:100%;font-size:16px;font-weight:600;line-height:1.4;color:var(--ink);
+    font-family:inherit;border:1px solid var(--mint);border-radius:9px;background:var(--card);
+    padding:4px 9px;outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 15%,transparent)}
+  .inline-edit-input::placeholder{color:var(--ink-3);font-weight:400}
+  .task.editing,.subtask.editing{border-color:var(--mint)}
+  .cat-tag{font-size:11px;color:var(--ink-3);display:flex;align-items:center;gap:5px}
+  /* 分类标签进入右侧操作行，与优先级标签同一行 */
+  .side-cat{flex:0 0 auto;white-space:nowrap}
+  .cat-tag .cat-dot{width:8px;height:8px;border-radius:50%}
+  .task-meta{font-size:12px;color:var(--ink-3)}
+  .sub-prog{flex:1;height:6px;background:var(--line);border-radius:4px;overflow:hidden;max-width:130px}
+  .sub-prog>i{display:block;height:100%;background:linear-gradient(90deg,var(--mint),var(--mint-deep));border-radius:4px;transition:width .3s}
+  /* 顶层与子任务右侧统一：优先级 / 环形进度 / 展开按钮 全部同一行 */
+  .task-side{flex:0 0 auto;display:flex;flex-direction:row;align-items:center;justify-content:flex-end;
+    gap:8px;min-width:0;align-self:center;white-space:nowrap}
+  .side-prio{transition:.15s}
+  .exp-btn{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink-2);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s;flex:0 0 28px}
+  .exp-btn:hover{border-color:var(--mint);color:var(--mint-deep);background:var(--mint-soft)}
+  .exp-btn svg{width:16px;height:16px;transition:.2s}
+  .exp-btn.open svg{transform:rotate(180deg)}
+  /* 任务进度：独立环形进度条，不与展开按钮合并 */
+  .task-ring{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto}
+  .task-ring svg{width:20px;height:20px;display:block}
+  .ring-pct{font-size:11px;font-weight:800;color:var(--ink-3);letter-spacing:.02em;white-space:nowrap}
+  /* 完成进度填充层（长按卡片 / 点击圆圈） */
+  .pfill{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none;z-index:0}
+  /* 完成进度条：仅「长按卡片」时由 JS 从 0→100% 推进；颜色取 --done-anim（设置页写入），走满才完成，中途松手回退 */
+  .pfill>i{position:absolute;left:0;top:0;height:100%;width:0;background:var(--done-anim);opacity:.2;
+    box-shadow:0 0 22px color-mix(in srgb,var(--done-anim) 70%,transparent)}
+  .task-row{position:relative;z-index:1}
+  .check-dot.ce{animation:ce .5s cubic-bezier(.34,1.56,.64,1) both}
+  @keyframes ce{0%{transform:scale(1)}45%{transform:scale(1.24)}100%{transform:scale(1)}}
+  .act{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--card);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:.15s}
+  .act:hover{border-color:var(--mint);color:var(--mint-deep);background:var(--mint-soft)}
+  .act svg{width:16px;height:16px}
+  .subtasks{margin:16px 0 0 52px;display:none;flex-direction:column;gap:12px;position:relative}  /* 父→子 16px + 缩进 52px；无竖线，层级靠缩进 + 间距表达；子任务彼此 12px */
+  .subtasks.open{display:flex;animation:fadeUp .25s both}  /* 展开播放轻微淡入过渡；DOM 不重建，故不会闪烁 */
+  .subtasks .subtasks{margin-left:38px;margin-top:12px}  /* 嵌套子任务再缩进一层 38px + 12px 垂直间距 */
+  .subtasks .task-group{margin-bottom:0}  /* 子任务组的 bottom margin 与 .subtasks 的 gap 会叠加，这里归零，间距统一由 gap 承担（12px） */
+  .subtask{display:block;background:color-mix(in srgb,var(--mint-soft) 52%,var(--card));
+    border:1px solid var(--line);border-radius:var(--radius);padding:10px 16px;box-shadow:var(--shadow-sm);transition:.15s;position:relative}
+  .subtask:hover{border-color:color-mix(in srgb,var(--mint) 38%,var(--line));box-shadow:var(--shadow)}
+  .subtask .task-body{cursor:inherit}
+  .subtask .check-dot{width:23px;height:23px;flex:0 0 23px}  /* 父/子勾选圈保持相同尺寸 23px */
+  .subtask .task-title{font-size:15.5px;font-weight:500}
+  .breather{text-align:center;color:var(--ink-3);padding:48px 20px;font-size:14px}
+  .breather .big{font-size:44px;margin-bottom:10px}
+  /* 底部固定快速添加：低透明度毛玻璃浅色背景 + 主题色描边 + 明确投影，与下方待办列表明显区分 */
+  .qa-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:20;
+    width:calc(100% - 44px);max-width:980px;display:flex;align-items:center;gap:10px;
+    padding:11px 14px;border:1.5px solid var(--mint);border-radius:var(--radius);
+    background:linear-gradient(180deg, color-mix(in srgb, var(--mint-soft) 55%, var(--card)), var(--card));
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 18px 42px -14px rgba(18,46,38,.4), 0 6px 18px -8px rgba(18,46,38,.22),
+      inset 0 1px 0 rgba(255,255,255,.9);animation:qaIn .25s ease both}
+  .qa-bar:focus-within{border-color:var(--mint-deep);
+    box-shadow:0 20px 46px -14px rgba(18,46,38,.44), 0 6px 18px -8px rgba(18,46,38,.24),
+      0 0 0 3px color-mix(in srgb,var(--mint) 16%,transparent)}
+  /* 左侧优先级选择：圆角矩形（小圆角，非全胶囊）+ 前置颜色标识，与任务卡片 .prio-tag 同视觉语言 */
+  .qa-prio{flex:0 0 auto;height:34px;padding:0 11px;border-radius:9px;border:1px solid transparent;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;transition:.15s;
+    font-size:12px;font-weight:700;outline:none}
+  .qa-prio:hover{filter:brightness(.96)}
+  .qa-prio .prio-dot{width:9px;height:9px;flex:0 0 9px;border-radius:50%;background:currentColor}
+  .qa-prio-txt{line-height:1}
+  .qa-prio-menu{min-width:132px}
+  .qa-input{flex:1;min-width:0;border:none;background:transparent;color:var(--ink);font-size:15px;outline:none}
+  .qa-input::placeholder{color:var(--ink-3)}
+  /* 自定义分类下拉（非原生 select） */
+  .qa-dd{position:relative;flex:0 0 auto}
+  .qa-dd-trigger{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink-2);
+    border-radius:9px;padding:7px 10px;font-size:13px;cursor:pointer;outline:none;transition:.15s}
+  .qa-dd-trigger:hover{border-color:var(--mint);color:var(--mint-deep)}
+  .qa-dd-trigger svg{width:14px;height:14px;color:var(--ink-3);transition:.2s}
+  .qa-dd.open .qa-dd-trigger svg{transform:rotate(180deg)}
+  .qa-dd-dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+  .qa-dd-menu{display:none;position:absolute;right:0;bottom:calc(100% + 6px);min-width:148px;
+    background:var(--card);border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow-lg);padding:6px;z-index:5}
+  .qa-dd.open .qa-dd-menu{display:block;animation:pop .12s ease}
+  .qa-dd-opt{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--ink-2);transition:.12s}
+  .qa-dd-opt:hover{background:var(--mint-soft);color:var(--mint-deep)}
+  .qa-dd-opt .qa-dd-dot{width:9px;height:9px}
+  .qa-dd-opt span.lbl{font-weight:500}
+
+  /* ============ 进度环 ============ */
+  .ring-wrap{display:flex;align-items:center;gap:4px}
+  .ring-wrap svg{width:46px;height:46px}
+  /* 今日进度环已移入顶部栏的 .tb-dp 胶囊（日期 | 环内百分比） */
+
+  /* ============ 统计 ============ */
+  .range-tabs{display:flex;gap:7px;margin-bottom:10px}  /* 切换条到内容区间距缩小：容器 padding-block 12px + 此处 10px = 22px */
+  .range-tabs button{border:1px solid var(--line);background:var(--card);color:var(--ink-2);
+    padding:8px 18px;border-radius:11px;cursor:pointer;font-size:13px;transition:.15s}
+  .range-tabs button:hover{border-color:var(--mint)}
+  .range-tabs button.on{background:var(--mint);color:#fff;border-color:var(--mint);box-shadow:0 4px 12px color-mix(in srgb,var(--mint) 34%,transparent)}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:18px}
+  .stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px;box-shadow:var(--shadow-sm);transition:.2s;min-width:0}
+  .stat-card:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
+  .stat-card h3{font-size:14px;margin-bottom:16px;color:var(--ink-2);font-weight:650}
+  /* ============ 统计图表（ECharts） ============ */
+  /* 热力图高度由组件按容器宽度动态推导（保证正方形格子），这里不再写 aspect-ratio */
+  .heat-scroll{width:100%;min-width:0;overflow:visible;padding:2px 0}
+  .heat-chart{width:100%;min-width:0;display:block}
+  .heat-legend{display:flex;align-items:center;gap:4px;margin-top:12px;font-size:11px;color:var(--ink-3)}
+  .heat-legend i{width:11px;height:11px;border-radius:3px}
+  .ring-chart{width:100%;height:180px;min-width:0}
+  .line-chart{width:100%;height:190px;min-width:0}
+  .chart-hint{font-size:11px;color:var(--ink-3);margin:-8px 0 12px;font-weight:400}
+
+  /* ============ 月历（左右布局） ============ */
+  .cal-layout{display:flex;gap:20px;align-items:flex-start}
+  .cal-panel{flex:0 0 332px;max-width:332px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm)}
+  .cal-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .cal-mid{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;min-width:0}
+  .cal-head b{font-size:17px;min-width:100px;text-align:center;white-space:nowrap}
+  .cal-nav{cursor:pointer;width:32px;height:32px;border-radius:9px;border:1px solid var(--line);
+    background:var(--card);display:flex;align-items:center;justify-content:center;color:var(--ink-2);font-size:17px;transition:.15s;flex:0 0 auto}
+  .cal-nav:hover{border-color:var(--mint);color:var(--mint-deep);background:var(--mint-soft)}
+  .cal-nav.cal-today{width:auto;padding:0 14px;font-size:13px;font-weight:600;gap:6px;flex:0 0 auto}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cal-dow{text-align:center;font-size:11px;color:var(--ink-3);padding:3px 0;font-weight:600}
+  .cal-cell{aspect-ratio:1;border-radius:10px;border:1px solid var(--line);background:var(--card);
+    padding:6px;cursor:pointer;position:relative;display:flex;flex-direction:column;transition:.15s}
+  .cal-cell:hover{border-color:var(--mint);transform:translateY(-2px);box-shadow:var(--shadow-sm)}
+  .cal-cell.today{border-color:var(--mint);box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 22%,transparent)}
+  .cal-cell.sel{border-color:var(--mint);background:var(--mint-soft);box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 16%,transparent)}
+  .cal-cell .d{font-size:12px;font-weight:600;line-height:1}
+  .cal-cell .cal-dot{width:6px;height:6px;border-radius:50%;background:var(--mint);margin-top:5px;
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 18%,transparent)}
+  .cal-daylist{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:18px;box-shadow:var(--shadow-sm);overflow:auto;max-height:80vh}
+  .cal-daylist h3{margin:0 0 16px;font-size:16px;color:var(--ink-2)}
+  .cal-daylist .task-group:last-child{margin-bottom:0}
+
+  /* ============ 设置 ============ */
+  .set-section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px 22px;margin-bottom:16px;box-shadow:var(--shadow-sm);transition:.2s}
+  .set-section:hover{box-shadow:var(--shadow)}
+  .set-section h3{font-size:14px;margin-bottom:14px;font-weight:650}
+  .field{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .field:last-child{border-bottom:none}
+  .field label{color:var(--ink-2);font-weight:500}
+  .seg{display:flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--bg)}
+  .seg button{border:none;background:transparent;padding:8px 18px;cursor:pointer;color:var(--ink-2);font-size:13px;transition:.15s}
+  .seg button.on{background:var(--mint);color:#fff}
+  /* 进度色板：扁平清新的选中态——白色描边 + 同色柔光，不使用黑色边框 */
+  .swatch{width:30px;height:30px;border-radius:10px;cursor:pointer;border:3px solid var(--card);
+    transition:.18s;position:relative;display:inline-flex;align-items:center;justify-content:center;
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--ink-3) 30%,transparent),0 1px 3px rgba(0,0,0,.08)}
+  .swatch:hover{transform:translateY(-1px)}
+  .swatch.on{border-color:var(--card);
+    box-shadow:0 0 0 2px var(--swatch-color,var(--mint)),0 0 0 6px color-mix(in srgb,var(--swatch-color,var(--mint)) 20%,transparent)}
+  .swatch.on::after{content:'✓';color:#fff;font-size:15px;font-weight:800;line-height:1;
+    text-shadow:0 1px 2px rgba(0,0,0,.28)}
+  .swatch-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .input{flex:1;max-width:340px;border:1px solid var(--line);background:var(--bg);color:var(--ink);
+    border-radius:10px;padding:10px 13px;font-size:13px;transition:.15s}
+  .input.bad{border-color:var(--prio-high)}
+  .input:focus{outline:none;border-color:var(--mint);box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 20%,transparent)}
+  .btn{border:none;border-radius:11px;padding:10px 18px;cursor:pointer;font-size:13px;font-weight:600;transition:.15s}
+  /* 主按钮扁平化：纯色底、无渐变无投影，与分类胶囊 / 分段控件保持同一视觉语言 */
+  .btn.accent{background:var(--mint);color:#fff;box-shadow:none}
+  .btn.accent:hover{background:var(--mint-deep)}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink-2)}
+  .btn.ghost:hover{border-color:var(--mint);color:var(--mint-deep)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+  .switch{width:44px;height:25px;border-radius:13px;background:var(--line);position:relative;cursor:pointer;transition:.2s}
+  .switch.on{background:var(--mint)}
+  .switch i{position:absolute;top:2.5px;left:2.5px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:var(--shadow-sm)}
+  .switch.on i{left:21.5px}
+
+  /* ============ 编辑弹框（替代原抽屉） ============ */
+  .form-row{margin-bottom:18px}
+  .form-row>label{display:block;font-size:12px;color:var(--ink-3);margin-bottom:8px;font-weight:700}
+
+  /* ============ 右键菜单 ============ */
+  #ctx{position:fixed;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow-lg);padding:7px;min-width:168px;display:none;z-index:50;animation:pop .12s ease}
+  @keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+  #ctx div{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;color:var(--ink-2);font-size:13px;transition:.12s}
+  #ctx div:hover{background:var(--mint-soft);color:var(--mint-deep)}
+  #ctx div.danger:hover{background:color-mix(in srgb,var(--prio-high) 14%,transparent);color:var(--prio-high)}
+  #ctx svg{width:16px;height:16px}
+  /* 右键菜单子菜单（优先级 / 改分类） */
+  #ctx .has-sub{position:relative;justify-content:flex-start}
+  #ctx .has-sub .caret{margin-left:auto;opacity:.45;transform:rotate(-90deg)}
+  #ctx .submenu{display:none;position:absolute;left:100%;top:-7px;margin-left:7px;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);padding:7px;min-width:150px;z-index:2}
+  #ctx .has-sub.open>.submenu{display:block;animation:pop .12s ease}
+  #ctx .has-sub.open.left>.submenu{left:auto;right:100%;margin-left:0;margin-right:7px}
+  #ctx .submenu div{justify-content:flex-start;color:var(--ink-2)}
+  #ctx .submenu div:hover{background:var(--mint-soft);color:var(--mint-deep)}
+  #ctx .submenu .cat-dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+  #ctx .submenu .prio-dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+  #ctx .submenu .cur{color:var(--mint-deep);font-weight:800}
+
+  /* ============ 弹窗 ============ */
+  .modal-mask{position:fixed;inset:0;background:rgba(10,20,18,.45);display:none;align-items:center;
+    justify-content:center;z-index:60;backdrop-filter:blur(3px)}
+  .modal-mask.show{display:flex;animation:fadeUp .2s both}
+  .modal{background:var(--card);border:1px solid var(--line);border-radius:18px;width:580px;max-width:94vw;
+    max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+  .modal-head b{font-size:16px;display:flex;align-items:center;gap:10px}
+  .modal-body{padding:20px 22px}
+  .modal-foot{padding:15px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px}
+  /* 添加分类弹框（.dlg-content 基础样式在 layers.css，这里用双类提高特异性覆盖宽度） */
+  /* 不设 max-height / overflow：内容完整展示，不出现滚动条；自然弹出动画（淡入 + 轻微上浮缩放） */
+  .dlg-content.cat-dialog{width:560px;overflow:visible;animation:catDialogIn .24s cubic-bezier(.2,.8,.25,1) both}
+  @keyframes catDialogIn{from{opacity:0;transform:translate(-50%,-46%) scale(.94)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+  .cat-dialog-desc{padding:14px 22px 0;margin:0;font-size:13px;color:var(--ink-3);line-height:1.6}
+  .cat-dialog-body{display:flex;flex-direction:column;gap:12px;padding-top:16px}
+  .cat-edit-row{display:flex;align-items:center;gap:12px}
+  .cat-name-input{flex:0 0 118px;width:118px;border:1px solid var(--line);border-radius:9px;
+    padding:8px 10px;font-size:13px;font-family:inherit;color:var(--ink);background:var(--card);outline:none;transition:.15s}
+  .cat-name-input:focus{border-color:var(--mint);box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 15%,transparent)}
+  .cat-name-input::placeholder{color:var(--ink-3)}
+  /* 颜色选择器入口：默认只是一个当前色圆点，点击才弹气泡展示全部颜色 */
+  .cat-color-anchor{position:relative;flex:0 0 26px;width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+  .cat-color-trigger{width:23px;height:23px;border-radius:50%;border:2px solid var(--card);cursor:pointer;padding:0;
+    transition:.15s;box-shadow:0 0 0 1px color-mix(in srgb,var(--ink-3) 45%,transparent)}
+  .cat-color-trigger:hover{transform:scale(1.12);box-shadow:0 0 0 2px var(--mint)}
+  /* 颜色气泡：单项一行排开（8 色，由浅到深），不换行；间距紧凑整洁 */
+  .cat-palette{position:absolute;top:calc(100% + 8px);left:-6px;z-index:75;display:flex;flex-direction:row;
+    flex-wrap:nowrap;gap:8px;padding:10px 12px;background:var(--card);white-space:nowrap;
+    border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);animation:pop .12s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(-4px) scale(.96)}to{opacity:1;transform:none}}
+  .cat-swatch{width:22px;height:22px;flex:0 0 22px;border-radius:50%;border:2px solid transparent;cursor:pointer;
+    padding:0;transition:.15s;box-shadow:0 0 0 1px color-mix(in srgb,var(--ink-3) 30%,transparent)}
+  .cat-swatch:hover{transform:scale(1.12)}
+  .cat-swatch.selected{border-color:var(--card);box-shadow:0 0 0 2px var(--ink)}
+  .cat-row-del{flex:0 0 26px;width:26px;height:26px;border-radius:8px;border:1px solid var(--line);
+    background:transparent;color:var(--ink-3);font-size:18px;line-height:1;cursor:pointer;transition:.15s}
+  .cat-row-del:hover{border-color:var(--prio-high);color:var(--prio-high)}
+  .cat-add-row{align-self:flex-start;border:1px dashed var(--line);background:transparent;color:var(--ink-2);
+    border-radius:9px;padding:8px 14px;font-size:13px;font-family:inherit;cursor:pointer;transition:.15s}
+  .cat-add-row:hover{border-color:var(--mint);color:var(--mint-deep)}
+  /* 操作弹框内容（替代原右侧抽屉） */
+  .cat-chips{display:flex;flex-wrap:wrap;gap:9px}
+  .hint{font-size:12px;color:var(--ink-3);margin-top:10px;line-height:1.5}
+  /* 内联新增子任务卡片：尺寸/缩进与同级子任务一致，仅内容区可编辑 */
+  .inline-sub{border:1px dashed var(--mint)!important;background:color-mix(in srgb,var(--mint-soft) 55%,var(--card));
+    box-shadow:0 8px 20px -10px color-mix(in srgb,var(--mint) 60%,transparent);
+    padding:12px 14px;animation:subIn .22s ease both}
+  .inline-sub:hover{border-color:var(--mint-deep)!important;box-shadow:0 10px 22px -10px color-mix(in srgb,var(--mint) 65%,transparent)}
+  @keyframes subIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  .inline-sub-row{display:flex;align-items:center;gap:11px}
+  .inline-sub-dot{width:23px;height:23px;flex:0 0 23px;border-radius:50%;border:2px solid var(--ink-3);background:var(--card)}  /* 实色边框，与真实勾选圈一致 23px */
+  .inline-sub-input{flex:1;min-width:0;border:none;background:transparent;outline:none;color:var(--ink);
+    font-size:14px;font-family:inherit;line-height:22px}
+  .inline-sub-input::placeholder{color:var(--ink-3)}
+  .inline-sub .act{width:24px;height:24px;border-radius:8px;flex:0 0 24px}
+  .inline-sub-hint{margin:6px 0 0 30px;font-size:11px;color:var(--ink-3);line-height:1.4}
+
+  /* ============ Toast ============ */
+  #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:var(--ink);color:var(--bg);padding:12px 22px;border-radius:24px;font-size:13px;
+    z-index:70;transition:.25s;pointer-events:none;box-shadow:var(--shadow-lg);font-weight:500}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* 顶栏单行自适应：空间变窄时逐级精简「信息量」，而不是让 tab 折行或被裁切 */
+  @media(max-width:1020px){
+    .sync-status .txt{display:none}
+  }
+  @media(max-width:860px){
+    .brand small{display:none}
+    .tb-nav button span.lbl{display:none}
+    .tb-nav button{padding:0 11px}
+    .tb-dp-date{display:none}  /* 窄屏只隐藏日期文字，保留进度环胶囊 */
+    .tb-dp-sep{display:none}
+    .tb-pill{padding:0 10px;gap:6px}
+    .tb-pills{gap:8px}
+  }
+  @media(max-width:820px){
+    .cal-layout{flex-direction:column;gap:16px}
+    .cal-panel{flex:0 0 auto;max-width:none;width:100%}
+    /* cal-layout 的 align-items:flex-start 会阻止交叉轴拉伸；显式写满宽度，
+       否则窄窗下已完成列表卡片只按内容宽度收缩（截图中的窄卡片）。 */
+    .cal-daylist{max-height:none;overflow:visible;width:100%;align-self:stretch}
+    .cal-cell .d{font-size:13px}
+  }
+  @media(max-width:768px){
+    :root{--heat-cell:12px;--heat-gap:4px}
+    .tb-inner{padding:0 18px;gap:12px}
+    .stat-grid{grid-template-columns:1fr}
+    .page{padding:26px 18px 40px}
+    .page-today{padding-bottom:104px}
+    .page h1{font-size:24px}
+    .filter-sticky,.range-sticky{margin-inline:-18px;padding-inline:18px}
+    .task{padding:10px 12px}
+    .subtasks{margin-left:28px}
+    .subtasks .subtasks{margin-left:24px}
+    .subtask{padding:9px 12px}
+    .cal-grid{gap:6px}
+    .cal-cell{padding:8px;border-radius:11px}
+    .cal-cell .d{font-size:12px}
+    /* 移动端：日历已完成列表自然铺开、紧凑卡片，避免挤压 */
+    .cal-daylist .task{padding:9px 11px}
+    .cal-daylist .task-row{gap:10px}
+    .cal-daylist .side-cat{display:none}   /* 窄屏收起分类标签，为标题腾出空间 */
+    .range-tabs{flex-wrap:wrap}
+    .qa-bar{width:calc(100% - 36px)}
+  }
+  @media(max-width:420px){
+    .tb-inner{padding:0 14px;gap:8px}
+    .tb-nav{gap:4px}
+    .tb-nav button{padding:0 9px}
+    .page{padding:22px 14px 40px}
+    .page-today{padding-bottom:108px}
+    .filter-sticky,.range-sticky{margin-inline:-14px;padding-inline:14px}
+    .task{padding:9px 11px}
+    .subtask{padding:8px 11px}
+    .task-row{gap:11px}
+    .subtasks{margin-left:22px}
+    .subtasks .subtasks{margin-left:18px}
+    .qa-bar{width:calc(100% - 28px);padding:9px 11px;gap:8px}
+  }
+  /* 极窄屏：继续压缩间距而不是折行，保证 logo / tab / 胶囊始终同一行 */
+  @media(max-width:360px){
+    .tb-inner{gap:6px}
+    .brand b{display:none}
+    .tb-nav{gap:2px}
+    .tb-nav button{padding:0 8px}
+    .tb-pills{gap:6px}
+    .tb-pill{padding:0 8px}
+  }

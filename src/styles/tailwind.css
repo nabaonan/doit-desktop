@@ -1,0 +1,7 @@
+/* Tailwind CSS 4.3.5 —— 仅服务 components/ui/ 的 wrapper。
+ * 刻意跳过 preflight（@import "tailwindcss" 默认包含），避免重置原型按钮 / 输入 / 卡片样式。
+ * 业务样式仍由 tokens.css + prototype.css 提供，保证与定稿原型视觉零漂移。
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme" layer(theme);
+@import "tailwindcss/utilities" layer(utilities);

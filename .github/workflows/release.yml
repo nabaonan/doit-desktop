@@ -1,0 +1,95 @@
+name: Release CI
+
+# 只在打 tag（./release.sh 生成的 v* 标签）时构建并发布 Release；
+# 普通 push main / PR 走 ci.yml（仅单测 + 前端构建，不重复跑三平台出包）。
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: 构建并发布 ${{ matrix.platform }}
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: '--target universal-apple-darwin'
+          - platform: ubuntu-22.04
+            args: ''
+          - platform: windows-latest
+            args: ''
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 60
+
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安装前端依赖
+        run: npm ci
+
+      - name: Rust 工具链
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Rust 缓存
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: 安装 Linux 系统依赖
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      # 没配签名密钥时移掉 createUpdaterArtifacts，保证首个 release 也能出可用安装包；
+      # 在 GitHub 仓库 Settings → Secrets 添加 TAURI_PRIVATE_KEY / TAURI_KEY_PASSWORD 后即开启签名。
+      - name: 无签名密钥时关闭 updater 签名产物
+        if: ${{ secrets.TAURI_PRIVATE_KEY == '' }}
+        run: |
+          python3 - <<'EOF'
+          import json
+          p = 'src-tauri/tauri.conf.json'
+          d = json.load(open(p, encoding='utf-8'))
+          d.get('bundle', {}).pop('createUpdaterArtifacts', None)
+          json.dump(d, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+          open(p, 'a', encoding='utf-8').write('\n')
+          print('已临时关闭 createUpdaterArtifacts（未配置 TAURI_PRIVATE_KEY）')
+          EOF
+
+      - name: 构建并发布（tauri-action）
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 签名密钥（minisign 私钥全文，base64）+ 口令；缺失时构建未签名安装包
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'doit-desktop ${{ github.ref_name }}'
+          releaseBody: |
+            doit-desktop ${{ github.ref_name }}（Vue 3 + Tauri 2）
+
+            变更：
+            - 见下方自动生成的 Release Notes
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}

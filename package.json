@@ -1,0 +1,48 @@
+{
+  "name": "doit-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "doit Android 待办应用的桌面端 companion · Vue 3 + Tauri 2",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "build:web": "vite build",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.12.4",
+    "@tauri-apps/plugin-autostart": "2.7.0",
+    "@tauri-apps/plugin-dialog": "2.8.4",
+    "@tauri-apps/plugin-fs": "2.7.1",
+    "@tauri-apps/plugin-notification": "2.8.1",
+    "@tauri-apps/plugin-store": "2.5.1",
+    "@tauri-apps/plugin-updater": "2.14.1",
+    "@tauri-apps/plugin-window-state": "2.5.0",
+    "echarts": "6.1.0",
+    "pinia": "4.1.0",
+    "reka-ui": "2.11.0",
+    "vue": "3.5.45",
+    "vue-echarts": "8.3.2",
+    "vue-router": "4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.5",
+    "@tauri-apps/cli": "2.12.4",
+    "@types/node": "^22.15.0",
+    "@vitejs/plugin-vue": "6.0.11",
+    "@vue/test-utils": "2.6.0",
+    "jsdom": "^26.1.0",
+    "tailwindcss": "4.3.5",
+    "typescript": "5.9.3",
+    "vite": "8.3.8",
+    "vitest": "5.1.0",
+    "vue-tsc": "3.3.14"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}

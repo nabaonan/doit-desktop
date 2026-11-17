@@ -1,0 +1,15 @@
+/* WebView 兼容兜底：老旧 WebView2 / Linux WebKitGTK 对 color-mix / backdrop-filter 支持不一致 */
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  :root { --glass: rgba(255, 255, 255, .92); }
+  [data-theme="dark"] { --glass: rgba(25, 34, 31, .92); }
+  body { background: var(--bg); }
+  .qa-bar { background: var(--card); } /* 渐变依赖 color-mix，旧 WebView 降级为纯卡片色 */
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  #topbar { background: var(--card); } /* 仅顶栏毛玻璃需降级；分类吸顶条本就是纯 var(--bg)，无需降级 */
+  .modal-mask { background: rgba(10, 20, 18, .62); }
+}
+
+/* 主题切换只改变量，不触发整页重排 */
+html, body { transition: background-color .3s ease, color .3s ease; }
