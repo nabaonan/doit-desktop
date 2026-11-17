@@ -62,17 +62,25 @@ jobs:
 
       # 没配签名密钥时移掉 createUpdaterArtifacts，保证首个 release 也能出可用安装包；
       # 在 GitHub 仓库 Settings → Secrets 添加 TAURI_PRIVATE_KEY / TAURI_KEY_PASSWORD 后即开启签名。
+      # 注意：secrets 上下文不能用于 step 的 if 条件，这里先经 env 读取再在脚本里判定。
       - name: 无签名密钥时关闭 updater 签名产物
-        if: ${{ secrets.TAURI_PRIVATE_KEY == '' }}
+        env:
+          TPK: ${{ secrets.TAURI_PRIVATE_KEY }}
+        shell: bash
         run: |
-          python3 - <<'EOF'
-          import json
-          p = 'src-tauri/tauri.conf.json'
-          d = json.load(open(p, encoding='utf-8'))
-          d.get('bundle', {}).pop('createUpdaterArtifacts', None)
-          json.dump(d, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
-          open(p, 'a', encoding='utf-8').write('\n')
-          print('已临时关闭 createUpdaterArtifacts（未配置 TAURI_PRIVATE_KEY）')
+          if [ -n "$TPK" ]; then
+            echo "已配置 TAURI_PRIVATE_KEY，保留 updater 签名产物"
+          else
+            echo "未配置 TAURI_PRIVATE_KEY，临时关闭 createUpdaterArtifacts"
+            python3 - <<'EOF'
+            import json
+            p = 'src-tauri/tauri.conf.json'
+            d = json.load(open(p, encoding='utf-8'))
+            d.get('bundle', {}).pop('createUpdaterArtifacts', None)
+            json.dump(d, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+            open(p, 'a', encoding='utf-8').write('\n')
+            EOF
+          fi
           EOF
 
       - name: 构建并发布（tauri-action）
