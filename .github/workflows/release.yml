@@ -18,19 +18,18 @@ concurrency:
 
 jobs:
   macos:
-    name: macOS DMG（${{ matrix.arch }}）
-    # 原生架构各跑各的（Apple Silicon / Intel），不交叉编译，更快也更稳
-    runs-on: ${{ matrix.runner }}
+    name: macOS DMG（${{ matrix.arch }}，x64 交叉编译）
+    # 原生架构在 macos-15 (arm64) 上直编；x64 亦在同一 runner 交叉编译（macOS 交叉编译成熟，
+    # 且 Intel 版托管 runner 已下线，固定 macos-15 避免 release job 因找不到 runner 而停摆）
+    runs-on: macos-15
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: aarch64-apple-darwin
             arch: arm64
-            runner: macos-15
           - target: x86_64-apple-darwin
             arch: x64
-            runner: macos-15-intel
     steps:
       - uses: actions/checkout@v4
 

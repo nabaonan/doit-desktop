@@ -90,10 +90,12 @@ fn build_client(token: &Option<String>) -> Result<reqwest::Client, String> {
 }
 
 /// 当前平台应下载的安装包后缀。
+/// 注意：tauri 2 默认产物名为 `{product}_v{version}_{arch}.dmg`（含 aarch64/x64 但不含 “macos”），
+/// 所以 macOS 只按 `.dmg` 后缀判定即可（release 只出 dmg，无其他 dmg 类混淆）。
 fn platform_match(name: &str) -> bool {
     let n = name.to_lowercase();
     #[cfg(target_os = "macos")]
-    let ok = n.ends_with(".dmg") && (n.contains("macos") || n.contains("apple"));
+    let ok = n.ends_with(".dmg");
     #[cfg(target_os = "windows")]
     let ok = n.ends_with(".exe");
     #[cfg(target_os = "linux")]
