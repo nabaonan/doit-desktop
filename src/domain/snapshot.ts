@@ -1,5 +1,5 @@
 import { appError } from './errors'
-import type { Category, Result, SnapshotMeta, SnapshotV2, Task, TaskNode } from './types'
+import type { Category, Priority, Result, SnapshotMeta, SnapshotV2, Task, TaskNode } from './types'
 
 export interface SnapshotError {
   code: 'E_SNAPSHOT_INVALID'
@@ -49,7 +49,9 @@ export function normalizeSnapshot(s: SnapshotV2): SnapshotV2 {
     if (seen.has(raw.uid)) continue
     seen.add(raw.uid)
     const t = raw as Task & Record<string, unknown>
-    const priority = t.priority === 1 || t.priority === 2 ? t.priority : 0
+    const priority = Number.isInteger(t.priority) && Number(t.priority) >= 0 && Number(t.priority) <= 4
+      ? (t.priority as Priority)
+      : 0
     const done = Boolean(t.done)
     tasks.push({
       uid: t.uid,

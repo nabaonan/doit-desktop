@@ -8,11 +8,23 @@ export const PROG_COLORS = [
   { name: '玫红', value: '#E5688A' },
 ] as const
 
+/**
+ * 优先级元数据 —— 以手机端（doit-apk）为准：
+ * 0 不设 / 1 低 / 2 普通 / 3 高 / 4 紧急。数组索引 == value（PRIORITY_META[v] 直取，顺序勿动）。
+ * varName 对应 tokens.css 的 --prio-* 变量名。
+ */
 export const PRIORITY_META: Array<{ value: Priority; label: string; varName: string }> = [
-  { value: 0, label: '低', varName: 'low' },
-  { value: 1, label: '普通', varName: 'normal' },
-  { value: 2, label: '高', varName: 'high' },
-  { value: 3, label: '紧急', varName: 'urgent' },
+  { value: 0, label: '不设', varName: 'none' },
+  { value: 1, label: '低', varName: 'low' },
+  { value: 2, label: '普通', varName: 'normal' },
+  { value: 3, label: '高', varName: 'high' },
+  { value: 4, label: '紧急', varName: 'urgent' },
+]
+
+/** 优先级选项的展示顺序：与手机端选择器一致——从高到低，最后是「不设」。 */
+export const PRIORITY_OPTIONS: Array<{ value: Priority; label: string; varName: string }> = [
+  ...PRIORITY_META.filter((m) => m.value !== 0).sort((a, b) => b.value - a.value),
+  PRIORITY_META[0],
 ]
 
 export const DEFAULT_SETTINGS: AppSettings = {

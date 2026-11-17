@@ -9,7 +9,8 @@ import type { Priority } from '@/domain/types'
 const tasks = useTaskStore()
 const ui = useUIStore()
 const selected = ref(tasks.currentCategory)
-const priority = ref<Priority>(0)
+// 新建待办默认优先级：与手机端一致为「普通」(2)
+const priority = ref<Priority>(2)
 const draft = ref('')
 const input = ref<HTMLInputElement | null>(null)
 

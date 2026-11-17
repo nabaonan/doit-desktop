@@ -1,5 +1,5 @@
 import { computed, nextTick, ref } from 'vue'
-import { PRIORITY_META } from '@/constants/tokens'
+import { PRIORITY_OPTIONS } from '@/constants/tokens'
 import { useTaskStore } from '@/stores/tasks'
 import type { TaskNode } from '@/domain/types'
 import type { MenuItem } from '@/components/ui/types'
@@ -17,7 +17,8 @@ export function useContextMenu(getNode: () => TaskNode | null) {
     if (node.done) return [del]
     const prio: MenuItem = {
       key: 'prio', label: '优先级', icon: 'flag',
-      children: PRIORITY_META.map((p) => ({
+      // 与手机端一致：高 → 低，最后「不设」
+      children: PRIORITY_OPTIONS.map((p) => ({
         key: String(p.value), label: p.label,
         color: `var(--prio-${p.varName})`, current: node.priority === p.value,
       })),

@@ -1,7 +1,7 @@
 /** doit-desktop 领域层类型 —— 与 DESIGN_SPEC.md 第 4 / 6.4 节、Android doit-apk 数据契约 v2 完全一致。 */
 
-/** 优先级：0 低 / 1 普通 / 2 高 / 3 紧急（升级为 4 档，旧数据 0/1/2 语义不变）。 */
-export type Priority = 0 | 1 | 2 | 3
+/** 优先级：0 不设 / 1 低 / 2 普通 / 3 高 / 4 紧急 —— 与手机端（doit-apk）完全一致。 */
+export type Priority = 0 | 1 | 2 | 3 | 4
 export type ThemeName = 'light' | 'dark'
 export type SkinName = 'mint' | 'soft'
 export type StatsRange = 'week' | 'month' | 'year'

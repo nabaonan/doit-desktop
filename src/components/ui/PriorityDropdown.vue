@@ -7,15 +7,15 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from 'reka-ui'
-import { PRIORITY_META } from '@/constants/tokens'
+import { PRIORITY_META, PRIORITY_OPTIONS } from '@/constants/tokens'
 import type { Priority } from '@/domain/types'
 
-/** 底部快速添加优先级选择：选中后用优先级背景色 + 文字展示；下拉选项只需文字（紧急/高/普通/低）。 */
-const model = defineModel<Priority>({ default: 0 })
+/** 底部快速添加优先级选择：选中后用优先级背景色 + 文字展示；下拉从高到低 + 最后「不设」（与手机端一致）。 */
+const model = defineModel<Priority>({ default: 2 })
 const open = ref(false)
 
 function metaOf(v: Priority) {
-  return PRIORITY_META[v] ?? PRIORITY_META[0]
+  return PRIORITY_META[v] ?? PRIORITY_META[1]
 }
 </script>
 
@@ -30,7 +30,7 @@ function metaOf(v: Priority) {
     <DropdownMenuPortal>
       <DropdownMenuContent class="ui-dd-content qa-prio-menu" side="top" align="start" :side-offset="6">
         <DropdownMenuItem
-          v-for="p in PRIORITY_META"
+          v-for="p in PRIORITY_OPTIONS"
           :key="p.value"
           class="qa-dd-opt"
           @click="model = p.value"
