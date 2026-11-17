@@ -14,6 +14,8 @@ use crate::error::AppError;
 
 /// GitHub Releases API（语义上的“最新发布”）。
 const RELEASE_API: &str = "https://api.github.com/repos/nabaonan/doit-desktop/releases/latest";
+/// 仓库元信息 API：用于在 404 时区分「token 无效」vs「仓库确实没有已发布 Release」。
+const REPO_INFO_API: &str = "https://api.github.com/repos/nabaonan/doit-desktop";
 /// 仓库发布页（前端“去 Releases 查看/下载”入口）。
 const RELEASE_PAGE: &str = "https://github.com/nabaonan/doit-desktop/releases";
 /// GitHub 下载域名前缀（download 白名单，杜绝任意 URL 下载落地）。
@@ -110,17 +112,27 @@ pub async fn check_update(token: Option<String>) -> crate::error::CmdResult<Chec
         .map_err(|_| AppError::Network("无法连接 GitHub".into()).to_string())?;
 
     let status = resp.status();
-    if status == reqwest::StatusCode::NOT_FOUND
-        || status == reqwest::StatusCode::UNAUTHORIZED
-        || status == reqwest::StatusCode::FORBIDDEN
-    {
-        // 私有仓库匿名/无权限：这是最常见的可预期失败，单独给可操作的提示。
-        return Err(
-            AppError::Permission(
-                "访问 GitHub Releases 被拒绝（私有仓库需在设置里填写只读 GitHub Token）".into(),
-            )
-            .to_string(),
-        );
+    let has_token = token.as_ref().is_some_and(|t| !t.trim().is_empty());
+    let is_auth_fail = status == reqwest::StatusCode::UNAUTHORIZED
+        || status == reqwest::StatusCode::FORBIDDEN;
+    let is_404 = status == reqwest::StatusCode::NOT_FOUND;
+    if is_auth_fail || is_404 {
+        // 按场景给可操作提示：无 token / token 无效 / 仓库无 Release 分开，避免误导。
+        // 注意：GitHub 对「无效 token 访问私有仓库」也统一返回 404（不暴露资源存在性），
+        // 所以有 token 的 404 再用 /repos 端点做一次判别。
+        let msg = if !has_token {
+            "访问 GitHub Releases 被拒绝（私有仓库需在设置里填写只读 GitHub Token）"
+        } else if is_auth_fail {
+            "GitHub Token 无效或权限不足：需已授权本仓库，具备 contents:read 的只读 Token"
+        } else {
+            match client.get(REPO_INFO_API).send().await {
+                Ok(rep) if rep.status().is_success() => {
+                    "GitHub 返回 404：仓库还没有已发布的 Release（只有 tag 不算），请先在 Actions 确认 release.yml 发布成功，或到 Releases 页查看"
+                }
+                _ => "GitHub 返回 404：Token 无效或无权访问该仓库（需已授权 + contents:read）",
+            }
+        };
+        return Err(AppError::Permission(msg.into()).to_string());
     }
     if !status.is_success() {
         return Err(AppError::Network(format!("GitHub 返回 HTTP {status}")).to_string());
@@ -211,14 +223,17 @@ pub async fn download_update(
         .await
         .map_err(|_| AppError::Network("下载请求失败".into()).to_string())?;
     let status = resp.status();
+    let has_token = token.as_ref().is_some_and(|t| !t.trim().is_empty());
     if status == reqwest::StatusCode::UNAUTHORIZED
         || status == reqwest::StatusCode::FORBIDDEN
         || status == reqwest::StatusCode::NOT_FOUND
     {
-        return Err(
-            AppError::Permission("下载被拒绝：私有仓库需在设置里填写只读 GitHub Token".into())
-                .to_string(),
-        );
+        let msg = if has_token {
+            "下载被拒绝（HTTP 401/403/404）：Token 无效或该版本没有当前平台的安装包，请到 Releases 页核对资产名"
+        } else {
+            "下载被拒绝：私有仓库需在设置里填写只读 GitHub Token"
+        };
+        return Err(AppError::Permission(msg.into()).to_string());
     }
     if !status.is_success() {
         return Err(AppError::Network(format!("下载返回 HTTP {status}")).to_string());
