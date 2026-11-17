@@ -173,10 +173,12 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
-  /** 新建子任务：继承父分类/优先级、unshift 倒序置顶、自动展开祖先链。 */
+  /** 新建子任务：继承父分类/优先级、unshift 倒序置顶、自动展开祖先链。
+   *  已完成父任务一律禁止添加子任务（两端契约：已完成任务不提供编辑/子任务入口），
+   *  否则 recalcUp 会把父任务翻回未完成。 */
   function createSub(parentUid: string, title: string): void {
     const parent = mutableNode(parentUid)          // 必须取响应式代理，否则 subs 变更不触发视图
-    if (!parent || !title.trim()) return
+    if (!parent || !title.trim() || parent.done) return
     const child = createSubtask(parent, title.trim(), nowStamp())
     parent.subs = [child, ...parent.subs]
     index.value.set(child.uid, parent.subs[0])   // 取响应式代理，与 root 树共享引用

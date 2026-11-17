@@ -142,7 +142,7 @@ function onSubToggle(item: MenuItem, event: MouseEvent): void {
 
     <div v-if="hasSubs || adding" class="subtasks" :class="{ open: expanded }">
       <InlineSubAdder
-        v-if="adding"
+        v-if="adding && !props.node.done"
         @commit="(v) => inlineSub.commit(props.node.uid, v)"
         @cancel="inlineSub.cancel"
       />
