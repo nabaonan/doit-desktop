@@ -26,8 +26,13 @@ watch(() => settings.webdav, (w) => {
   username.value = w.username
 })
 
-const urlBad = computed(() => urlTouched.value && Boolean(url.value) && !/^https?:\/\/.+\/$/.test(url.value))
-const canSave = computed(() => !urlBad.value && Boolean(url.value) && Boolean(username.value) && Boolean(settings.webdavPassword || settings.webdav.passwordRef))
+const urlBad = computed(() => {
+  const u = url.value.trim()
+  // 只校验“合法 http(s) 地址”，不强制尾斜杠：Rust normalize_base 会自动补根斜杠，
+  // 强制 `/` 结尾曾导致“测试成功但保存按钮被锁”（用户地址常不带尾斜杠）。
+  return urlTouched.value && Boolean(u) && !/^https?:\/\/\S+$/i.test(u)
+})
+const canSave = computed(() => !urlBad.value && Boolean(url.value.trim()) && Boolean(username.value.trim()) && Boolean(settings.webdavPassword || settings.webdav.passwordRef))
 
 function buildConfig() {
   return {

@@ -35,8 +35,24 @@ describe('WebDAV 配置可见性', () => {
   })
 })
 
-describe('SettingsPanel 凭据安全', () => {
-  beforeEach(() => {
+describe('WebDAV URL 校验（回归：无尾斜杠也应可保存）', () => {
+  it('不带尾斜杠的合法地址填入后，保存并同步按钮可用', async () => {
+    const { wrapper } = mountPanel(true)
+    const inputs = wrapper.findAll('input.input')
+    // 顺序：服务器地址 / 账号 / 密码
+    expect(inputs.length).toBeGreaterThanOrEqual(3)
+    await inputs[0].setValue('https://dav.example.com/doit') // 无尾斜杠
+    await inputs[0].trigger('blur') // 触发 urlTouched
+    await inputs[1].setValue('alice')
+    await inputs[2].setValue(SECRET)
+    const saveBtn = wrapper.findAll('button').find((b) => b.text().trim() === '保存并同步')
+    expect(saveBtn).toBeTruthy()
+    expect(saveBtn!.attributes('disabled')).toBeUndefined()
+    // 旧的强制尾斜杠规则会让这里变成 disabled → 此断言即回归点
+  })
+})
+
+describe('SettingsPanel 凭据安全', () => {  beforeEach(() => {
     invokeMock.mockReset()
     invokeMock.mockResolvedValue({ ok: true, value: undefined })
   })
