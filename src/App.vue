@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import {
+  ScrollAreaCorner, ScrollAreaRoot, ScrollAreaScrollbar, ScrollAreaThumb, ScrollAreaViewport,
+} from 'reka-ui'
 import TopBar from '@/components/doit/TopBar.vue'
 import QuickAddBar from '@/components/doit/QuickAddBar.vue'
 import Toast from '@/components/doit/Toast.vue'
@@ -49,7 +52,14 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
 
 <template>
   <TopBar :page="page" />
-  <main id="main"><RouterView /></main>
+  <!-- 页面纵向滚动用 Reka ScrollArea：自定义滚动条与分类横向滚动条统一样式（.ui-scroll-*） -->
+  <ScrollAreaRoot id="main" class="ui-scroll-root ui-scroll-root--v">
+    <ScrollAreaViewport class="ui-scroll-viewport"><RouterView /></ScrollAreaViewport>
+    <ScrollAreaScrollbar orientation="vertical" class="ui-scrollbar ui-scrollbar--v" force-mount>
+      <ScrollAreaThumb class="ui-scroll-thumb" />
+    </ScrollAreaScrollbar>
+    <ScrollAreaCorner class="ui-scroll-corner" />
+  </ScrollAreaRoot>
   <div id="qabar-layer"><QuickAddBar v-if="page === 'today'" /></div>
   <Toast />
   <ConfirmDeleteDialog />

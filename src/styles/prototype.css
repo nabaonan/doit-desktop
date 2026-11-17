@@ -95,7 +95,7 @@
   /* ============ 主内容 ============ */
   /* 所有组件包在 #app 内：需自行承担 flex 列布局，使 #main 高度被限制到视口剩余、其内滚动 */
   #app{display:flex;flex-direction:column;height:100%;min-height:0}
-  #main{flex:1;overflow-y:auto;min-height:0}  /* 唯一滚动容器（body 已 overflow:hidden），min-height:0 保证 flex 内可收缩滚动 */
+  #main{flex:1;overflow:hidden;min-height:0}  /* Reka ScrollArea 根：内部 viewport 承担唯一滚动（body 已 overflow:hidden），min-height:0 保证 flex 内可收缩 */
   .page{max-width:1080px;margin:0 auto;padding:30px 26px 40px;animation:fadeUp .35s ease both}
   .page-today{padding-bottom:104px}
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -106,11 +106,8 @@
   .kicker{font-size:12px;color:var(--mint-deep);font-weight:700;letter-spacing:.06em}
   .page h1{font-size:27px;margin:5px 0 3px;display:flex;align-items:center;gap:14px;font-weight:750}
   .sub{color:var(--ink-3);font-size:13px;margin-bottom:16px}
-  .filterbar{display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:5px;scrollbar-width:thin}
+  .filterbar{display:flex;gap:8px;flex-wrap:nowrap;width:max-content;padding-bottom:6px}  /* 横向滚动交给外层 Reka ScrollArea viewport，本行仅承载内容流 */
   .filterbar .chip{flex:0 0 auto}
-  .filterbar::-webkit-scrollbar{height:5px}
-  .filterbar::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
-  .filterbar::-webkit-scrollbar-track{background:transparent}
   /* 分类筛选吸顶：滚动发生在 #main（body overflow:hidden），其内容顶部即顶栏底部。
      胶囊距顶栏保留 12px 间距（避免贴在一起）：由容器上下相等的内边距提供，初始与吸顶一致（top:0）。
      上下内边距保持相等（各 12px，padding-block 独立属性，不被断点 padding-inline 覆盖）；

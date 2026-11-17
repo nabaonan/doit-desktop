@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import {
+  ScrollAreaCorner, ScrollAreaRoot, ScrollAreaScrollbar, ScrollAreaThumb, ScrollAreaViewport,
+} from 'reka-ui'
 import CategoryManagerDialog from '@/components/doit/CategoryManagerDialog.vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { Category } from '@/domain/types'
@@ -20,23 +23,32 @@ function activeStyle(c: Category): Record<string, string> | undefined {
 
 <template>
   <div class="filter-sticky">
-    <div class="filterbar">
-      <div class="chip" :class="{ active: tasks.filter === 'all' }" @click="select('all')">全部</div>
-      <div
-        v-for="c in tasks.categories"
-        :key="c.name"
-        class="chip"
-        :class="{ active: tasks.filter === c.name }"
-        :style="activeStyle(c)"
-        @click="select(c.name)"
-      >
-        <span v-if="tasks.filter !== c.name" class="cat-dot" :style="{ background: c.color }" />
-        {{ c.name }}
-      </div>
-      <button type="button" class="chip chip-add" title="添加分类" @click="showManager = true">
-        <span class="chip-add-plus">+</span> 添加分类
-      </button>
-    </div>
+    <!-- 分类横向滚动用 Reka ScrollArea：自定义滚动条与页面纵向滚动条统一样式（.ui-scroll-*） -->
+    <ScrollAreaRoot class="ui-scroll-root ui-scroll-root--h filter-scroll">
+      <ScrollAreaViewport class="ui-scroll-viewport">
+        <div class="filterbar">
+          <div class="chip" :class="{ active: tasks.filter === 'all' }" @click="select('all')">全部</div>
+          <div
+            v-for="c in tasks.categories"
+            :key="c.name"
+            class="chip"
+            :class="{ active: tasks.filter === c.name }"
+            :style="activeStyle(c)"
+            @click="select(c.name)"
+          >
+            <span v-if="tasks.filter !== c.name" class="cat-dot" :style="{ background: c.color }" />
+            {{ c.name }}
+          </div>
+          <button type="button" class="chip chip-add" title="添加分类" @click="showManager = true">
+            <span class="chip-add-plus">+</span> 添加分类
+          </button>
+        </div>
+      </ScrollAreaViewport>
+      <ScrollAreaScrollbar orientation="horizontal" class="ui-scrollbar ui-scrollbar--h" force-mount>
+        <ScrollAreaThumb class="ui-scroll-thumb" />
+      </ScrollAreaScrollbar>
+      <ScrollAreaCorner class="ui-scroll-corner" />
+    </ScrollAreaRoot>
     <CategoryManagerDialog v-model:open="showManager" />
   </div>
 </template>

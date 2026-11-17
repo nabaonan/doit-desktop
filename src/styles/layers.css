@@ -17,6 +17,34 @@
 [data-reka-popper-content-wrapper],
 [data-reka-portal] { z-index: 60; }
 
+/* Reka ScrollArea 统一滚动条：页面纵向（#main）与分类横向（.filterbar）共用同一套自定义样式，
+   替代 WebKit 默认（10px）与 filterbar thin（5px）的混搭不一致，三平台观感一致 */
+.ui-scroll-root { position: relative; overflow: hidden; display: flex; }
+.ui-scroll-root--v { flex-direction: row; align-items: stretch; }
+.ui-scroll-root--h { flex-direction: column; align-items: stretch; }
+.ui-scroll-viewport {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: scroll;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.ui-scroll-viewport::-webkit-scrollbar { display: none; }
+.ui-scrollbar { display: flex; touch-action: none; background: transparent; z-index: 12; }
+.ui-scrollbar--v { width: 9px; flex: 0 0 9px; }
+.ui-scrollbar--h { height: 9px; flex: 0 0 9px; }
+.ui-scroll-thumb {
+  position: relative;
+  flex: 1;
+  background: var(--line);
+  border-radius: 9999px;
+  transition: background .15s;
+}
+.ui-scroll-thumb:hover { background: var(--ink-3); }
+.ui-scroll-corner { background: transparent; }
+
+
 /* z-index：topbar 30 / qa-bar 20 / ctx 50 / modal 60 / toast 70 / chart-tip 90 */
 .ui-menu-content,
 .ui-popover-content,
