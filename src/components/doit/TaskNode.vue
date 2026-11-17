@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import ContextMenu from '@/components/ui/ContextMenu.vue'
 import Icon from '@/components/ui/Icon.vue'
+import UiTooltip from '@/components/ui/UiTooltip.vue'
 import CheckCircle from './CheckCircle.vue'
 import MiniRing from './MiniRing.vue'
 import PriorityTag from './PriorityTag.vue'
@@ -97,7 +98,6 @@ function onSubToggle(item: MenuItem, event: MouseEvent): void {
           editing: editing,
           'has-subs': hasSubs,
         }]"
-        :title="hasSubs ? '单击卡片展开 / 收起子任务' : ''"
         @click="onCardClick"
         @pointerdown="onHoldDown"
         @pointerup="hold.onPointerUp"
@@ -119,6 +119,9 @@ function onSubToggle(item: MenuItem, event: MouseEvent): void {
               @commit="(v) => inlineEdit.commit(props.node.uid, v)"
               @cancel="inlineEdit.cancel"
             />
+            <UiTooltip v-else-if="hasSubs" text="单击卡片或右侧按钮展开 / 收起子任务">
+              <div class="task-title" :class="{ done: props.node.done }">{{ props.node.title }}</div>
+            </UiTooltip>
             <div v-else class="task-title" :class="{ done: props.node.done }">{{ props.node.title }}</div>
           </div>
           <div class="task-side">
@@ -127,9 +130,11 @@ function onSubToggle(item: MenuItem, event: MouseEvent): void {
             </span>
             <PriorityTag :value="props.node.priority" />
             <MiniRing v-if="ring" :pct="ring.pct" />
-            <button v-if="hasSubs" class="exp-btn" :class="{ open: expanded }" title="展开/收起子任务" @click="onExpand">
-              <Icon name="chevron" :size="16" />
-            </button>
+            <UiTooltip v-if="hasSubs" text="展开/收起子任务">
+              <button class="exp-btn" :class="{ open: expanded }" @click="onExpand">
+                <Icon name="chevron" :size="16" />
+              </button>
+            </UiTooltip>
           </div>
         </div>
       </div>
