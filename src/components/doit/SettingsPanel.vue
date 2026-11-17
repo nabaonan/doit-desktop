@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { invokeCommand, isTauri } from '@/services/ipc'
+import {
+  UPDATE_TOKEN_KEY, checkForUpdate, compareVersions, downloadUpdate, hasUpdate,
+} from '@/services/update'
+import type { CheckUpdateResult } from '@/services/update'
 import UiSwitch from '@/components/ui/UiSwitch.vue'
 import Icon from '@/components/ui/Icon.vue'
 import { PROG_COLORS } from '@/constants/tokens'
@@ -62,11 +66,33 @@ function toggleEnabled(v: boolean): void {
 const autostart = ref(false)
 const checkingUpdate = ref(false)
 
+// —— 检查更新（GitHub Releases）——
+const updateToken = ref(localStorage.getItem(UPDATE_TOKEN_KEY) ?? '')
+const currentVersion = ref('0.1.2') // 兜底：正常情况下以 app_metadata 为准
+const updateInfo = ref<CheckUpdateResult | null>(null)
+const downloading = ref(false)
+const dlReceived = ref(0)
+const dlTotal = ref(0)
+const dlPath = ref('')
+const dlPercent = computed(() => {
+  if (!dlTotal.value) return 0
+  return Math.min(100, Math.round((dlReceived.value / dlTotal.value) * 100))
+})
+
 onMounted(async () => {
   if (!isTauri()) return
-  const result = await invokeCommand<boolean>('get_autostart')
-  if (result.ok) autostart.value = result.value
+  const meta = await invokeCommand<{ version: string }>('app_metadata')
+  if (meta.ok) currentVersion.value = meta.value.version
+  const autostartResult = await invokeCommand<boolean>('get_autostart')
+  if (autostartResult.ok) autostart.value = autostartResult.value
 })
+
+function saveUpdateToken(): void {
+  const v = updateToken.value.trim()
+  if (v) localStorage.setItem(UPDATE_TOKEN_KEY, v)
+  else localStorage.removeItem(UPDATE_TOKEN_KEY)
+  ui.notify(v ? '已保存 GitHub Token（仅存本地，用于检查更新）' : '已清除 GitHub Token')
+}
 
 async function toggleAutostart(v: boolean): Promise<void> {
   if (!isTauri()) { ui.notify('桌面端才支持开机自启'); return }
@@ -79,22 +105,66 @@ async function toggleAutostart(v: boolean): Promise<void> {
   }
 }
 
-/** 检查更新：endpoint 由 tauri.conf 的 plugins.updater 配置，未发布 latest.json 时给出友好提示。 */
+/** 检查更新：直接查 GitHub Releases 最新版本，不做签名 updater 依赖。 */
 async function checkUpdate(): Promise<void> {
   if (!isTauri()) { ui.notify('桌面端才支持检查更新'); return }
   checkingUpdate.value = true
+  updateInfo.value = null
+  dlPath.value = ''
   try {
-    const { check } = await import('@tauri-apps/plugin-updater')
-    const update = await check()
-    if (!update) { ui.notify('已是最新版本'); return }
-    ui.notify(`发现新版本 ${update.version}，正在下载…`)
-    await update.downloadAndInstall()
-    ui.notify('更新已安装，重启应用后生效')
+    const result = await checkForUpdate(updateToken.value.trim() || undefined)
+    if (!result.ok) {
+      ui.notify(`检查更新失败：${result.error}`)
+      return
+    }
+    const info = result.value
+    updateInfo.value = info
+    if (!hasUpdate(currentVersion.value, info.latestTag)) {
+      ui.notify(`已是最新版本（v${currentVersion.value}）`)
+      updateInfo.value = null
+    }
   } catch (e) {
     ui.notify(`检查更新失败：${e instanceof Error ? e.message : String(e)}`)
   } finally {
     checkingUpdate.value = false
   }
+}
+
+/** 下载最新版安装包，显示进度；完成后给出本地路径与 Releases 入口。 */
+async function runDownload(): Promise<void> {
+  const info = updateInfo.value
+  if (!info?.asset) { ui.notify('远端没有可下载的安装包'); return }
+  downloading.value = true
+  dlReceived.value = 0
+  dlTotal.value = info.asset.size || 0
+  try {
+    const result = await downloadUpdate(
+      info.asset.url,
+      updateToken.value.trim() || undefined,
+      {
+        onProgress: (received, total) => {
+          dlReceived.value = received
+          if (total) dlTotal.value = total
+        },
+        onDone: (path) => { dlPath.value = path },
+      },
+    )
+    if (!result.ok) {
+      ui.notify(`下载失败：${result.error}`)
+      downloading.value = false
+      return
+    }
+    ui.notify(`已下载：${result.value.path.replace(/^.*\//, '')}`)
+    downloading.value = false
+  } catch (e) {
+    ui.notify(`下载失败：${e instanceof Error ? e.message : String(e)}`)
+    downloading.value = false
+  }
+}
+
+function openReleases(): void {
+  const url = updateInfo.value?.htmlUrl ?? 'https://github.com/nabaonan/doit-desktop/releases'
+  void invokeCommand('open_external', { url })
 }
 </script>
 
@@ -183,9 +253,44 @@ async function checkUpdate(): Promise<void> {
       </div>
       <div class="field" style="border: none">
         <label>软件更新</label>
-        <button class="btn ghost" :disabled="checkingUpdate" @click="checkUpdate">
-          {{ checkingUpdate ? '检查中…' : '检查更新' }}
-        </button>
+        <div class="update-box">
+          <div class="update-row">
+            <button class="btn ghost" :disabled="checkingUpdate || downloading" @click="checkUpdate">
+              {{ checkingUpdate ? '检查中…' : '检查更新' }}
+            </button>
+            <span class="update-cur">当前 v{{ currentVersion }}</span>
+          </div>
+
+          <div v-if="updateInfo" class="update-tip">
+            发现新版本 <b>v{{ updateInfo.latestTag }}</b>
+            <span v-if="updateInfo.asset" class="update-hint">（{{ updateInfo.asset.name }}）</span>
+          </div>
+
+          <template v-if="downloading">
+            <div class="update-bar"><div class="update-bar-fill" :style="{ width: dlPercent + '%' }" /></div>
+            <div class="update-percent">
+              {{ dlPercent }}%<span v-if="dlReceived">
+                （{{ (dlReceived / 1048576).toFixed(1) }}MB / {{ dlTotal ? (dlTotal / 1048576).toFixed(1) : '?' }}MB）</span>
+            </div>
+          </template>
+          <div v-else-if="dlPath" class="update-tip ok">已下载：{{ dlPath }}</div>
+
+          <div v-if="updateInfo" class="update-row">
+            <button v-if="updateInfo.asset" class="btn accent" :disabled="downloading" @click="runDownload">
+              {{ downloading ? '下载中…' : (dlPath ? '重新下载' : '下载安装包') }}
+            </button>
+            <button class="btn ghost" @click="openReleases">打开 Releases 页</button>
+          </div>
+
+          <div class="update-token">
+            <input
+              v-model="updateToken" class="update-token-input" type="password" autocomplete="off"
+              placeholder="GitHub 只读 Token（私有仓库检查更新需要）"
+              @blur="saveUpdateToken"
+            />
+            <span class="update-hint">仅存本机、用于 GitHub API；公开仓库可不填</span>
+          </div>
+        </div>
       </div>
     </div>
 

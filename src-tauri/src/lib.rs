@@ -116,6 +116,8 @@ pub fn run() {
             commands::system::app_metadata,
             commands::system::get_autostart,
             commands::system::set_autostart,
+            commands::update::check_update,
+            commands::update::download_update,
         ])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 应用失败");

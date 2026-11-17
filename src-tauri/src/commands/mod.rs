@@ -5,3 +5,4 @@ pub mod settings;
 pub mod snapshot;
 pub mod sync;
 pub mod system;
+pub mod update;
