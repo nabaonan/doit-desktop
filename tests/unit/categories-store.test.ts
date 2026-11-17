@@ -71,4 +71,49 @@ describe('tasks.addCategories 分类管理', () => {
     expect(store.snapshot.categories.map((c) => c.name)).toContain('旧实例分类')
     expect(store.dirty).toBe(true)
   })
+
+  it('categoryTaskCount 统计包含子任务且排除已删除', () => {
+    const store = useTaskStore()
+    const now = Date.now()
+    store.load({
+      version: 2, revision: 1, exportedAt: now, deviceId: 't', lastSyncAt: null,
+      categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now }],
+      tasks: [
+        { uid: 'a', parentUid: null, title: '父', category: '工作', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 0, sortOrder: 0 },
+        { uid: 'a1', parentUid: 'a', title: '子', category: '工作', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 1, sortOrder: 0 },
+        { uid: 'a2', parentUid: 'a', title: '已删子', category: '工作', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: now, depth: 1, sortOrder: 1 },
+      ],
+    })
+    expect(store.categoryTaskCount('工作')).toBe(2)
+    expect(store.categoryTaskCount('不存在')).toBe(0)
+  })
+
+  it('removeCategory 清空引用任务分类、移除分类、回退当前筛选并返回受影响数', () => {
+    const store = useTaskStore()
+    const now = Date.now()
+    store.load({
+      version: 2, revision: 1, exportedAt: now, deviceId: 't', lastSyncAt: null,
+      categories: [
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now },
+        { name: '生活', color: '#5B8DEF', sortOrder: 1, updatedAt: now },
+      ],
+      tasks: [
+        { uid: 'a', parentUid: null, title: '任务A', category: '工作', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 0, sortOrder: 0 },
+        { uid: 'a1', parentUid: 'a', title: '任务A1', category: '工作', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 1, sortOrder: 0 },
+        { uid: 'b', parentUid: null, title: '任务B', category: '生活', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 0, sortOrder: 1 },
+      ],
+    })
+    store.setFilter('工作')
+    const affected = store.removeCategory('工作')
+    expect(affected).toBe(2)
+    expect(store.categories.map((c) => c.name)).toEqual(['生活'])
+    expect(store.categories[0].sortOrder).toBe(0)
+    expect(store.filter).toBe('all')
+    const a = store.root.find((n) => n.uid === 'a')!
+    const a1 = a.subs.find((n) => n.uid === 'a1')!
+    expect(a.category).toBe('')
+    expect(a1.category).toBe('')
+    expect(store.root.find((n) => n.uid === 'b')!.category).toBe('生活')
+    expect(store.dirty).toBe(true)
+  })
 })

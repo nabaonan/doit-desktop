@@ -253,6 +253,39 @@ export const useTaskStore = defineStore('tasks', () => {
     filter.value = next
   }
 
+  /** 某个分类下仍存在的任务数（顶级 + 子任务，排除已删除墓碑）。 */
+  function categoryTaskCount(name: string): number {
+    let count = 0
+    const walk = (nodes: TaskNode[]) => {
+      for (const n of nodes) {
+        if (n.deletedAt === null && n.category === name) count += 1
+        walk(n.subs ?? [])
+      }
+    }
+    walk(root.value)
+    return count
+  }
+
+  /**
+   * 删除分类：把所有仍引用该分类且未删除的任务（顶级 + 子任务）的 category 置空（变为无分类），
+   * 从分类列表移除并重排 sortOrder；若当前筛的正是该分类则回退到「全部」。返回受影响任务数。
+   */
+  function removeCategory(name: string): number {
+    let affected = 0
+    const walk = (nodes: TaskNode[]) => {
+      for (const n of nodes) {
+        if (n.deletedAt === null && n.category === name) { n.category = ''; affected += 1 }
+        walk(n.subs ?? [])
+      }
+    }
+    walk(root.value)
+    categories.value = categories.value.filter((c) => c.name !== name).map((c, i) => ({ ...c, sortOrder: i }))
+    if (filter.value === name) filter.value = 'all'
+    root.value = [...root.value]
+    touch()
+    return affected
+  }
+
   function toggleCollapsed(uid: string): void {
     collapsed.value = { ...collapsed.value, [uid]: !collapsed.value[uid] }
   }
@@ -280,5 +313,6 @@ export const useTaskStore = defineStore('tasks', () => {
     todayNodes, stats, visibleNodes, currentCategory,
     load, createTop, createSub, rename, setPriority, setCategory, toggleDone, remove, addCategories,
     setFilter, toggleCollapsed, markClean, refreshToday, resetToSeed, toSnapshotValue,
+    categoryTaskCount, removeCategory,
   }
 })
