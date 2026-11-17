@@ -13,7 +13,6 @@ export function useInlineEdit() {
     tasks.inlineSubFor = null
     tasks.inlineEditFor = uid
   }
-
   function commit(uid: string, value: string): void {
     if (tasks.inlineEditFor !== uid) return
     const title = value.trim()

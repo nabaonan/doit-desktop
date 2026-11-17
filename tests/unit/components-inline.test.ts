@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import InlineEditor from '@/components/doit/InlineEditor.vue'
 import InlineSubAdder from '@/components/doit/InlineSubAdder.vue'
@@ -21,14 +21,24 @@ describe('InlineEditor 内联编辑', () => {
     expect(w.emitted('commit')).toBeUndefined()
   })
 
-  it('失焦提交，且提交后不再重复触发 cancel', async () => {
-    const w = mount(InlineEditor, { props: { value: '原标题' } })
-    const input = w.get('input')
-    await input.setValue('失焦标题')
-    await input.trigger('blur')
-    expect(w.emitted('commit')).toEqual([['失焦标题']])
-    await input.trigger('keydown', { key: 'Escape' })
-    expect(w.emitted('cancel')).toBeUndefined()
+  it('焦点竞态窗口内失焦不提交；越过后真实失焦提交，且提交后不再触发 cancel', async () => {
+    // 回归：从右键菜单进编辑时，菜单关闭的焦点回抢会在挂载后极短时间内触发一次 blur，
+    // 若立即提交会「一点编辑就被退出」。窗口内（<200ms）失焦应保留编辑态，真实失焦才提交。
+    vi.useFakeTimers()
+    try {
+      const w = mount(InlineEditor, { props: { value: '原标题' } })
+      const input = w.get('input')
+      await input.setValue('失焦标题')
+      await input.trigger('blur')
+      expect(w.emitted('commit')).toBeUndefined()      // 窗口内不提交
+      vi.advanceTimersByTime(220)                       // 越过竞态窗口
+      await input.trigger('blur')
+      expect(w.emitted('commit')).toEqual([['失焦标题']])
+      await input.trigger('keydown', { key: 'Escape' })
+      expect(w.emitted('cancel')).toBeUndefined()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('Enter 后再 blur 只提交一次', async () => {
