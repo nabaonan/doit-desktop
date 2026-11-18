@@ -73,7 +73,7 @@ const checkingUpdate = ref(false)
 
 // —— 检查更新（GitHub Releases）——
 const updateToken = ref(localStorage.getItem(UPDATE_TOKEN_KEY) ?? '')
-const currentVersion = ref('0.1.2') // 兜底：正常情况下以 app_metadata 为准
+const currentVersion = ref('0.1.3') // 兜底：正常情况下以 app_metadata（运行时真实版本）为准
 const updateInfo = ref<CheckUpdateResult | null>(null)
 const downloading = ref(false)
 const dlReceived = ref(0)
@@ -256,16 +256,30 @@ function openReleases(): void {
         <label>开机自启</label>
         <UiSwitch :model-value="autostart" label="登录时自动启动 doit" @update:model-value="toggleAutostart" />
       </div>
+    </div>
+
+    <div class="set-section">
+      <h3>关于</h3>
       <div class="field" style="border: none">
-        <label>软件更新</label>
-        <div class="update-box">
-          <div class="update-row">
+        <label>版本</label>
+        <div class="about-ver">
+          <div class="about-ver-top">
+            <span>doit-desktop v{{ currentVersion }} · 数据契约 v2</span>
             <button class="btn ghost" :disabled="checkingUpdate || downloading" @click="checkUpdate">
               {{ checkingUpdate ? '检查中…' : '检查更新' }}
             </button>
-            <span class="update-cur">当前 v{{ currentVersion }}</span>
           </div>
+          <input
+            v-model="updateToken" class="update-token-input" type="password" autocomplete="off"
+            placeholder="GitHub 只读 Token（私有仓库检查更新需要）"
+            @blur="saveUpdateToken"
+          />
+          <span class="update-hint">仅存本机、用于 GitHub API；公开仓库可不填</span>
+        </div>
+      </div>
 
+      <div v-if="updateInfo || downloading || dlPath" class="field" style="border: none; padding-top: 0">
+        <div class="update-box">
           <div v-if="updateInfo" class="update-tip">
             发现新版本 <b>v{{ updateInfo.latestTag }}</b>
             <span v-if="updateInfo.asset" class="update-hint">（{{ updateInfo.asset.name }}）</span>
@@ -286,22 +300,8 @@ function openReleases(): void {
             </button>
             <button class="btn ghost" @click="openReleases">打开 Releases 页</button>
           </div>
-
-          <div class="update-token">
-            <input
-              v-model="updateToken" class="update-token-input" type="password" autocomplete="off"
-              placeholder="GitHub 只读 Token（私有仓库检查更新需要）"
-              @blur="saveUpdateToken"
-            />
-            <span class="update-hint">仅存本机、用于 GitHub API；公开仓库可不填</span>
-          </div>
         </div>
       </div>
-    </div>
-
-    <div class="set-section">
-      <h3>关于</h3>
-      <div class="field"><label>版本</label><span>doit-desktop v0.1.0 · 数据契约 v2</span></div>
       <div class="field" style="border: none"><label>同步文件</label><span>doit-backup.json（与手机端共用）</span></div>
     </div>
   </div>
