@@ -26,7 +26,7 @@ function go(id: PageId): void {
       type="button"
       @click="go(tab.id)"
     >
-      <Icon :name="tab.icon" :size="18" />
+      <Icon :name="tab.icon" :size="16" />
       <span class="lbl">{{ tab.label }}</span>
     </button>
   </nav>

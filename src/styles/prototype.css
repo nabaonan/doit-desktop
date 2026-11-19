@@ -43,7 +43,7 @@
     border:none;background:transparent;color:var(--ink-2);
     padding:0 15px;border-radius:11px;cursor:pointer;font-size:14px;font-weight:500;
     display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;transition:.18s}
-  .tb-nav button svg{width:18px;height:18px;flex:0 0 18px}
+  .tb-nav button svg{width:16px;height:16px;flex:0 0 16px}
   .tb-nav button:hover{background:var(--mint-soft);color:var(--mint-deep)}
   /* 选中态仅用背景/字重表达，不再使用下方指示横线 */
   .tb-nav button.active{background:var(--mint-soft);color:var(--mint-deep);font-weight:700}
@@ -60,7 +60,7 @@
   .tb-dp{gap:9px;border-radius:19px}
   .tb-dp-sep{width:1px;height:16px;background:var(--line);margin:0 1px}
   .tb-dp .ring-wrap{margin:0}
-  .tb-dp .ring-sm svg{width:30px;height:30px}
+  .tb-dp .ring-sm svg{width:24px;height:24px}
   .ring-pct{font-size:11px;font-weight:800;fill:var(--ink)}
   .sync-status .cloud{width:18px;height:18px;color:var(--mint);flex:0 0 18px}
   .sync-status.spin .cloud{animation:spin 1s linear infinite}

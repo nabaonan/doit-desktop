@@ -57,7 +57,7 @@ function goToday(): void {
     >
       <span class="tb-dp-date">{{ dateLabel }}</span>
       <span class="tb-dp-sep" />
-      <TodayRing :done="tasks.stats.done" :total="tasks.stats.total" :size="30" />
+      <TodayRing :done="tasks.stats.done" :total="tasks.stats.total" :size="24" />
     </div>
   </div>
 </template>
