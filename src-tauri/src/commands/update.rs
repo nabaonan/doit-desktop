@@ -1,5 +1,5 @@
 //! 检查更新 + 下载安装包：
-//! - `check_update`：调 GitHub Releases API 查最新版本（可选只读 token；私有仓库匿名会被拒）。
+//! - `check_update`：调 GitHub Releases API 查最新版本（仓库公开后匿名即可访问）。
 //! - `download_update`：reqwest 流式下载最新版安装包到应用缓存目录，边下边 emit `update://progress`。
 //!
 //! 安全约定（同 error.rs）：错误只回 `"CODE: safe message"`，绝不含 token / 完整 URL / 无权限信息外的细节。
@@ -66,7 +66,7 @@ struct GhAsset {
     size: Option<u64>,
 }
 
-/// 构建带默认头（User-Agent 必填；有 token 则注入 Bearer，token 只用在本函数内）。、
+/// 构建带默认头（User-Agent 必填；若仍有调用方传入 token 则注入 Bearer，token 只用在本函数内）。
 fn build_client(token: &Option<String>) -> Result<reqwest::Client, String> {
     let mut headers = reqwest::header::HeaderMap::new();
     let ua: reqwest::header::HeaderValue = "doit-desktop-update-checker/1.0"
@@ -119,11 +119,10 @@ pub async fn check_update(token: Option<String>) -> crate::error::CmdResult<Chec
         || status == reqwest::StatusCode::FORBIDDEN;
     let is_404 = status == reqwest::StatusCode::NOT_FOUND;
     if is_auth_fail || is_404 {
-        // 按场景给可操作提示：无 token / token 无效 / 仓库无 Release 分开，避免误导。
-        // 注意：GitHub 对「无效 token 访问私有仓库」也统一返回 404（不暴露资源存在性），
-        // 所以有 token 的 404 再用 /repos 端点做一次判别。
+        // 开源后匿名即可查询；这些异常一般意味着「仓库暂无可读 Release」或网络/访问受限。
+        // 若未来以私有仓库 + token 方式部署，仍按场景区分提示。
         let msg = if !has_token {
-            "访问 GitHub Releases 被拒绝（私有仓库需在设置里填写只读 GitHub Token）"
+            "无法获取 GitHub 最新版本：仓库暂无已发布的 Release，或网络/访问受限，请稍后重试"
         } else if is_auth_fail {
             "GitHub Token 无效或权限不足：需已授权本仓库，具备 contents:read 的只读 Token"
         } else {
@@ -233,7 +232,7 @@ pub async fn download_update(
         let msg = if has_token {
             "下载被拒绝（HTTP 401/403/404）：Token 无效或该版本没有当前平台的安装包，请到 Releases 页核对资产名"
         } else {
-            "下载被拒绝：私有仓库需在设置里填写只读 GitHub Token"
+            "无法下载安装包（可能是文件不存在或网络受限），请到 Releases 页手动下载"
         };
         return Err(AppError::Permission(msg.into()).to_string());
     }

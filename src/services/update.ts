@@ -2,9 +2,6 @@ import { listen } from '@tauri-apps/api/event'
 import { invokeCommand } from './ipc'
 import type { Result } from '@/domain/types'
 
-/** GitHub Token 的本地存储键：仅存 localStorage，不进快照/不同步/不备份。 */
-export const UPDATE_TOKEN_KEY = 'doit-desktop-update-token'
-
 export interface UpdateAsset {
   name: string
   url: string
@@ -43,9 +40,9 @@ export function hasUpdate(current: string, latest: string): boolean {
   return compareVersions(current, latest) < 0
 }
 
-/** 检查更新：查 GitHub Releases 最新版本（私有仓库需 token）。 */
-export async function checkForUpdate(token?: string): Promise<Result<CheckUpdateResult>> {
-  return invokeCommand<CheckUpdateResult>('check_update', { token: token || null })
+/** 检查更新：查 GitHub Releases API，仓库公开后匿名即可使用，无需 Token。 */
+export async function checkForUpdate(): Promise<Result<CheckUpdateResult>> {
+  return invokeCommand<CheckUpdateResult>('check_update', {})
 }
 
 export interface DownloadCallbacks {
@@ -53,13 +50,9 @@ export interface DownloadCallbacks {
   onDone: (path: string) => void
 }
 
-/**
- * 下载安装包：监听 update://progress 事件更新进度，完成后返回本地路径。
- * token 仅作参数内存传递，不落盘。
- */
+/** 下载安装包：监听 update://progress 事件更新进度，完成后返回本地路径。 */
 export async function downloadUpdate(
   url: string,
-  token: string | undefined,
   cb: DownloadCallbacks,
 ): Promise<Result<{ path: string }>> {
   let unlisten: (() => void) | undefined
@@ -69,10 +62,7 @@ export async function downloadUpdate(
       if (p.phase === 'done' && p.path) cb.onDone(p.path)
       cb.onProgress(p.received, p.total || 0)
     })
-    const result = await invokeCommand<{ path: string }>('download_update', {
-      url,
-      token: token || null,
-    })
+    const result = await invokeCommand<{ path: string }>('download_update', { url })
     if (!result.ok) {
       cb.onProgress(0, 0)
     }

@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { invokeCommand, isTauri } from '@/services/ipc'
 import {
-  UPDATE_TOKEN_KEY, checkForUpdate, compareVersions, downloadUpdate, hasUpdate,
+  checkForUpdate, compareVersions, downloadUpdate, hasUpdate,
 } from '@/services/update'
 import type { CheckUpdateResult } from '@/services/update'
 import UiSwitch from '@/components/ui/UiSwitch.vue'
@@ -71,8 +71,7 @@ function toggleEnabled(v: boolean): void {
 const autostart = ref(false)
 const checkingUpdate = ref(false)
 
-// —— 检查更新（GitHub Releases）——
-const updateToken = ref(localStorage.getItem(UPDATE_TOKEN_KEY) ?? '')
+// —— 检查更新（GitHub Releases，公开仓库匿名即可，无需 Token）——
 const currentVersion = ref('0.1.3') // 兜底：正常情况下以 app_metadata（运行时真实版本）为准
 const updateInfo = ref<CheckUpdateResult | null>(null)
 const downloading = ref(false)
@@ -92,13 +91,6 @@ onMounted(async () => {
   if (autostartResult.ok) autostart.value = autostartResult.value
 })
 
-function saveUpdateToken(): void {
-  const v = updateToken.value.trim()
-  if (v) localStorage.setItem(UPDATE_TOKEN_KEY, v)
-  else localStorage.removeItem(UPDATE_TOKEN_KEY)
-  ui.notify(v ? '已保存 GitHub Token（仅存本地，用于检查更新）' : '已清除 GitHub Token')
-}
-
 async function toggleAutostart(v: boolean): Promise<void> {
   if (!isTauri()) { ui.notify('桌面端才支持开机自启'); return }
   const result = await invokeCommand('set_autostart', { enabled: v })
@@ -117,7 +109,7 @@ async function checkUpdate(): Promise<void> {
   updateInfo.value = null
   dlPath.value = ''
   try {
-    const result = await checkForUpdate(updateToken.value.trim() || undefined)
+    const result = await checkForUpdate()
     if (!result.ok) {
       ui.notify(`检查更新失败：${result.error}`)
       return
@@ -145,7 +137,6 @@ async function runDownload(): Promise<void> {
   try {
     const result = await downloadUpdate(
       info.asset.url,
-      updateToken.value.trim() || undefined,
       {
         onProgress: (received, total) => {
           dlReceived.value = received
@@ -269,12 +260,6 @@ function openReleases(): void {
               {{ checkingUpdate ? '检查中…' : '检查更新' }}
             </button>
           </div>
-          <input
-            v-model="updateToken" class="update-token-input" type="password" autocomplete="off"
-            placeholder="GitHub 只读 Token（私有仓库检查更新需要）"
-            @blur="saveUpdateToken"
-          />
-          <span class="update-hint">仅存本机、用于 GitHub API；公开仓库可不填</span>
         </div>
       </div>
 
