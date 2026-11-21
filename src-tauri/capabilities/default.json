@@ -1,9 +1,16 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "最小权限：仅主窗口核心能力。业务数据全部经自定义 IPC 命令（自定义命令不受 ACL 限制），插件权限一律不额外授予。",
+  "description": "主窗口能力：核心能力 + 已注册插件的 default 权限（检查更新/设置持久化/对话框/通知/自启/窗口状态）。业务数据仍经自定义 IPC 命令传递。",
   "windows": ["main"],
   "permissions": [
-    "core:default"
+    "core:default",
+    "fs:default",
+    "store:default",
+    "dialog:default",
+    "notification:default",
+    "autostart:default",
+    "updater:default",
+    "window-state:default"
   ]
 }
