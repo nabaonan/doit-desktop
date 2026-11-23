@@ -281,7 +281,8 @@
     padding:8px 18px;border-radius:11px;cursor:pointer;font-size:13px;transition:.15s}
   .range-tabs button:hover{border-color:var(--mint)}
   .range-tabs button.on{background:var(--mint);color:#fff;border-color:var(--mint);box-shadow:0 4px 12px color-mix(in srgb,var(--mint) 34%,transparent)}
-  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:18px}
+  /* 统计卡片各占一整行：热力图铺满宽度放大方块，分类占比、趋势图依次换行 */
+  .stat-grid{display:grid;grid-template-columns:1fr;gap:18px}
   .stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
     padding:20px;box-shadow:var(--shadow-sm);transition:.2s;min-width:0}
   .stat-card:hover{box-shadow:var(--shadow);transform:translateY(-2px)}

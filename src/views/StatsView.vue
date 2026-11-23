@@ -41,7 +41,7 @@ const colors = computed<Record<string, string>>(() =>
         <p class="chart-hint">悬停扇区或图例查看该分类完成数</p>
         <DonutChart :data="share" :colors="colors" />
       </div>
-      <div class="stat-card" style="grid-column: 1/-1">
+      <div class="stat-card">
         <h3>{{ ui.range === 'year' ? '每月完成趋势' : '每日完成趋势' }}</h3>
         <p class="chart-hint">悬停数据点查看{{ ui.range === 'year' ? '当月' : '当日' }}完成了几项任务</p>
         <LineChart :buckets="buckets" :range="ui.range" />
