@@ -7,6 +7,7 @@ import {
 } from 'reka-ui'
 import CategoryManagerDialog from '@/components/doit/CategoryManagerDialog.vue'
 import ContextMenu from '@/components/ui/ContextMenu.vue'
+import { categoryTint, normalizeCategoryColor } from '@/domain/color'
 import { useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import type { Category } from '@/domain/types'
@@ -50,10 +51,9 @@ function select(name: string): void {
   tasks.setFilter(name)
 }
 
-const DEFAULT_CAT_COLOR = '#3FBB9C'
 /** 兼容历史空色值：分类必须有可见颜色，否则胶囊圆点 / 卡片标签会退化成灰字。 */
 function catColor(c: Category): string {
-  return c.color && c.color.trim() ? c.color : DEFAULT_CAT_COLOR
+  return normalizeCategoryColor(c.color)
 }
 
 function activeStyle(c: Category): Record<string, string> | undefined {
@@ -63,11 +63,15 @@ function activeStyle(c: Category): Record<string, string> | undefined {
   return { background: color, 'border-color': color, color: '#fff' }
 }
 
-/** 分类待办数 tag：非选中态数字用分类色、底色用分类色浅色；选中态（chip 已是分类纯色底）反白以示可读。 */
+/**
+ * 分类待办数 tag：未选中态用分类色文字 + 分类色 14% 淡底（与手机端一致）；
+ * 选中态 chip 已是分类纯色底，数字反白。
+ * 底色用 rgba() 而非 color-mix，避免旧版 WebView 解析失败导致背景丢失。
+ */
 function countStyle(c: Category, active: boolean): Record<string, string> {
   if (active) return { color: '#fff', background: 'rgba(255,255,255,.25)' }
   const color = catColor(c)
-  return { color, background: `color-mix(in srgb, ${color} 14%, transparent)` }
+  return { color, background: categoryTint(color, 0.14) }
 }
 
 /** 右键菜单的「删除分类」：打开确认框（分类下有任务会自动提示受影响数量）。 */
@@ -109,7 +113,6 @@ function doDelete(): void {
               <span v-if="tasks.filter !== c.name" class="cat-dot" :style="{ background: catColor(c) }" />
               {{ c.name }}
               <span
-                v-if="tasks.categoryOpenCount(c.name) > 0"
                 class="chip-count"
                 :style="countStyle(c, tasks.filter === c.name)"
               >{{ tasks.categoryOpenCount(c.name) }}</span>

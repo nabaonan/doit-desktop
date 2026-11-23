@@ -9,6 +9,7 @@ import PriorityTag from './PriorityTag.vue'
 import CompletionFill from './CompletionFill.vue'
 import InlineEditor from './InlineEditor.vue'
 import InlineSubAdder from './InlineSubAdder.vue'
+import { categoryTint, normalizeCategoryColor } from '@/domain/color'
 import { useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import { useContextMenu } from '@/composables/useContextMenu'
@@ -44,7 +45,7 @@ const expanded = computed(() => adding.value || (hasSubs.value && !tasks.collaps
 const ring = computed(() => subProgress(props.node))
 const cat = computed(() => tasks.categories.find((c) => c.name === props.node.category))
 // 兼容历史空色值：没有颜色的分类也要有可见的标签底色与圆点，不能退化成灰字
-const catColor = computed(() => cat.value?.color?.trim() ? cat.value.color : '#3FBB9C')
+const catColor = computed(() => normalizeCategoryColor(cat.value?.color))
 const showCat = computed(() => !props.isSub && props.showCategory && Boolean(cat.value))
 
 function onCardClick(e: MouseEvent): void {
@@ -132,7 +133,7 @@ function onSubToggle(item: MenuItem, event: MouseEvent): void {
               class="cat-tag side-cat"
               :style="{
                 color: catColor,
-                background: `color-mix(in srgb, ${catColor} 14%, transparent)`,
+                background: categoryTint(catColor, 0.14),
               }"
             >
               <span class="cat-dot" :style="{ background: catColor }" />{{ cat?.name }}
