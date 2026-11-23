@@ -15,8 +15,6 @@ const tip = computed(() => `优先级：${meta.value.label}（仅可通过右键
     <span
       class="prio-tag prio-readonly"
       :class="`prio-${meta.varName}`"
-    >
-      <span class="prio-dot" />{{ meta.label }}
-    </span>
+    >{{ meta.label }}</span>
   </UiTooltip>
 </template>

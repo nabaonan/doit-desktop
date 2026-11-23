@@ -125,8 +125,14 @@ function onSubToggle(item: MenuItem, event: MouseEvent): void {
             <div v-else class="task-title" :class="{ done: props.node.done }">{{ props.node.title }}</div>
           </div>
           <div class="task-side">
-            <span v-if="showCat" class="cat-tag side-cat">
-              <span class="cat-dot" :style="{ background: cat?.color }" />{{ cat?.name }}
+            <span
+              v-if="showCat"
+              class="cat-tag side-cat"
+              :style="cat
+                ? { color: cat.color, background: `color-mix(in srgb, ${cat.color} 14%, transparent)` }
+                : undefined"
+            >
+              <span class="cat-dot" :style="cat ? { background: cat.color } : undefined" />{{ cat?.name }}
             </span>
             <PriorityTag :value="props.node.priority" />
             <MiniRing v-if="ring" :pct="ring.pct" />
