@@ -18,18 +18,12 @@ concurrency:
 
 jobs:
   macos:
-    name: macOS DMG（${{ matrix.arch }}，x64 交叉编译）
-    # 原生架构在 macos-15 (arm64) 上直编；x64 亦在同一 runner 交叉编译（macOS 交叉编译成熟，
-    # 且 Intel 版托管 runner 已下线，固定 macos-15 避免 release job 因找不到 runner 而停摆）
+    # 单 job 顺序构建 arm64 + x64 两个 target（不再并行抢占 macos runner）。
+    # 背景：此前用 matrix 两个 job 并行跑在 macos-15，免费账号 macOS runner 队列紧张时，
+    # x64 分支经常排队 ~20 分钟被系统取消，导致 needs 全绿失败、release 发布被跳过。
+    # 合并为一个 job 后只需 1 个 macOS runner，排队概率减半，且总时长相近。
+    name: macOS DMG（arm64 + x64 交叉编译）
     runs-on: macos-15
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: aarch64-apple-darwin
-            arch: arm64
-          - target: x86_64-apple-darwin
-            arch: x64
     steps:
       - uses: actions/checkout@v4
 
@@ -44,7 +38,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -64,19 +58,26 @@ jobs:
             node -e "const fs=require('fs');const p='src-tauri/tauri.conf.json';const d=JSON.parse(fs.readFileSync(p,'utf8'));delete (d.bundle||{}).createUpdaterArtifacts;fs.writeFileSync(p,JSON.stringify(d,null,2)+'\n');"
           fi
 
-      - name: 构建 Tauri（${{ matrix.target }}）
+      - name: 构建 Tauri（arm64）
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-        run: npm run tauri build -- --target ${{ matrix.target }} --bundles app,dmg
+        run: npm run tauri build -- --target aarch64-apple-darwin --bundles app,dmg
+
+      - name: 构建 Tauri（x64 交叉编译）
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        run: npm run tauri build -- --target x86_64-apple-darwin --bundles app,dmg
 
       - uses: actions/upload-artifact@v4
         with:
-          name: macos-${{ matrix.arch }}
+          name: macos-dmg
           path: |
-            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/latest.json
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.sig
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/aarch64-apple-darwin/release/bundle/**/latest.json
+            src-tauri/target/x86_64-apple-darwin/release/bundle/**/*.sig
           if-no-files-found: warn
 
   windows:
