@@ -37,6 +37,13 @@ function activeStyle(c: Category): Record<string, string> | undefined {
   return { background: c.color, 'border-color': c.color, color: '#fff' }
 }
 
+/** 分类待办数 tag：非选中态数字用分类色、底色用分类色浅色；选中态（chip 已是分类纯色底）反白以示可读。 */
+function countStyle(c: Category, active: boolean): Record<string, string> {
+  return active
+    ? { color: '#fff', background: 'rgba(255,255,255,.25)' }
+    : { color: c.color, background: `color-mix(in srgb, ${c.color} 14%, transparent)` }
+}
+
 /** 右键分类：删除该分类（分类下有任务会自动提示受影响数量）。 */
 function askDelete(c: Category): void {
   pendingDelete.value = c.name
@@ -68,6 +75,11 @@ function doDelete(): void {
             >
               <span v-if="tasks.filter !== c.name" class="cat-dot" :style="{ background: c.color }" />
               {{ c.name }}
+              <span
+                v-if="tasks.categoryOpenCount(c.name) > 0"
+                class="chip-count"
+                :style="countStyle(c, tasks.filter === c.name)"
+              >{{ tasks.categoryOpenCount(c.name) }}</span>
             </div>
           </UiTooltip>
           <button type="button" class="chip chip-add" title="添加分类" @click="showManager = true">

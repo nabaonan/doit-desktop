@@ -309,12 +309,21 @@ export const useTaskStore = defineStore('tasks', () => {
     return snapshot.value
   }
 
+  /** 某个分类下未完成的顶级待办数：只统计顶级任务（不含子任务），排除已完成与已删除墓碑。 */
+  function categoryOpenCount(name: string): number {
+    let count = 0
+    for (const n of root.value) {
+      if (n.deletedAt === null && n.category === name && !n.done) count += 1
+    }
+    return count
+  }
+
   return {
     snapshot, root, index, categories, filter, collapsed, inlineEditFor, inlineSubFor,
     today, deviceId, revision, dirty,
     todayNodes, stats, visibleNodes, currentCategory,
     load, createTop, createSub, rename, setPriority, setCategory, toggleDone, remove, addCategories,
     setFilter, toggleCollapsed, markClean, refreshToday, resetToSeed, toSnapshotValue,
-    categoryTaskCount, removeCategory,
+    categoryTaskCount, categoryOpenCount, removeCategory,
   }
 })
