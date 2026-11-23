@@ -87,27 +87,18 @@ onMounted(() => {
 })
 onBeforeUnmount(() => ro?.disconnect())
 
-/** 可用绘图宽度。 */
-const plotW = computed(() => Math.max(140, wrapW.value - margin.value.left - margin.value.right))
-
-/**
- * 单格边长上限：年视图 53 列只占半行时格子很小，整行后需随宽度放大铺满；
- * 周/月视图只有 7 列，整行下若不封顶方块会被拉到 100px+，故限制后居中显示。
- */
-const maxCellPx = computed(() => (props.range === 'year' ? Infinity : 40))
+/** 正方形关键：容器高 = 上下留白 + (容器宽 - 左右留白) / cols × rows。方块随容器宽度自适应。 */
+const chartH = computed(() => {
+  const { cols, rows } = layout.value
+  const plotW = Math.max(140, wrapW.value - margin.value.left - margin.value.right)
+  return Math.round(margin.value.top + margin.value.bottom + (plotW / cols) * rows)
+})
 
 /** 单格边长（px），驱动 borderWidth / borderRadius 随格子缩放。 */
-const cellPx = computed(() => Math.min(plotW.value / layout.value.cols, maxCellPx.value))
-
-/** 实际绘图区宽度；格子封顶（周/月）时小于容器宽度，居中留白。 */
-const gridW = computed(() => cellPx.value * layout.value.cols)
-
-/** grid 左边距：铺满时贴边，封顶时左右留白对称居中。 */
-const gridLeft = computed(() => Math.max(margin.value.left, (wrapW.value - gridW.value) / 2))
-
-/** 正方形关键：容器高 = 上下留白 + 单格边长 × 行数。 */
-const chartH = computed(() =>
-  Math.round(margin.value.top + margin.value.bottom + cellPx.value * layout.value.rows))
+const cellPx = computed(() => {
+  const plotW = Math.max(140, wrapW.value - margin.value.left - margin.value.right)
+  return plotW / layout.value.cols
+})
 
 const option = computed<EChartsOption>(() => {
   const p = palette.value
@@ -117,13 +108,7 @@ const option = computed<EChartsOption>(() => {
 
   return {
     animation: false,
-    grid: {
-      left: Math.round(gridLeft.value),
-      width: Math.round(gridW.value),
-      top: margin.value.top,
-      bottom: margin.value.bottom,
-      containLabel: false,
-    },
+    grid: { ...margin.value, containLabel: false },
     tooltip: {
       trigger: 'item',
       triggerOn: 'mousemove',

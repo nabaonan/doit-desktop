@@ -30,7 +30,7 @@ const colors = computed<Record<string, string>>(() =>
         {{ r.label }}
       </button>
     </div></div>
-    <div class="stat-grid">
+    <div class="stat-grid" :class="{ 'stat-grid-full': ui.range === 'year' }">
       <div class="stat-card">
         <h3>完成热力图</h3>
         <p class="chart-hint">悬停或点击色块查看当日完成了几项任务</p>
