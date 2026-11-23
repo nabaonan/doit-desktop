@@ -313,7 +313,7 @@
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
   .cal-dow{text-align:center;font-size:11px;color:var(--ink-3);padding:3px 0;font-weight:600}
   .cal-cell{aspect-ratio:1;border-radius:10px;border:1px solid var(--line);background:var(--card);
-    padding:6px;cursor:pointer;position:relative;display:flex;flex-direction:column;transition:.15s}
+    padding:6px;cursor:pointer;position:relative;display:flex;flex-direction:column;align-items:center;transition:.15s}
   .cal-cell:hover{border-color:var(--mint);transform:translateY(-2px);box-shadow:var(--shadow-sm)}
   .cal-cell.today{border-color:var(--mint);box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 22%,transparent)}
   .cal-cell.sel{border-color:var(--mint);background:var(--mint-soft);box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 16%,transparent)}
