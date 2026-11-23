@@ -6,16 +6,35 @@ import {
   ScrollAreaCorner, ScrollAreaRoot, ScrollAreaScrollbar, ScrollAreaThumb, ScrollAreaViewport,
 } from 'reka-ui'
 import CategoryManagerDialog from '@/components/doit/CategoryManagerDialog.vue'
-import UiTooltip from '@/components/ui/UiTooltip.vue'
+import ContextMenu from '@/components/ui/ContextMenu.vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import type { Category } from '@/domain/types'
+import type { MenuItem } from '@/components/ui/types'
 
 const tasks = useTaskStore()
 const ui = useUIStore()
 const showManager = ref(false)
 // 待删除的分类名：非空即打开删除确认弹框
 const pendingDelete = ref<string | null>(null)
+// 待编辑的分类名：非空即打开编辑弹框
+const editingName = ref<string | null>(null)
+const showEditor = ref(false)
+
+/** 分类右键菜单：编辑 / 删除（分类名通过闭包带入 handler）。 */
+const catMenuItems: MenuItem[] = [
+  { key: 'edit', label: '编辑分类', icon: 'pencil' },
+  { key: 'del', label: '删除分类', icon: 'trash', danger: true },
+]
+
+function onCatAction(c: Category, key: string): void {
+  if (key === 'edit') {
+    editingName.value = c.name
+    showEditor.value = true
+  } else if (key === 'del') {
+    askDelete(c)
+  }
+}
 
 /** 删除提示：分类下有任务时明确告知数量影响，否则普通确认。 */
 const deleteMsg = computed(() => {
@@ -31,20 +50,27 @@ function select(name: string): void {
   tasks.setFilter(name)
 }
 
+const DEFAULT_CAT_COLOR = '#3FBB9C'
+/** 兼容历史空色值：分类必须有可见颜色，否则胶囊圆点 / 卡片标签会退化成灰字。 */
+function catColor(c: Category): string {
+  return c.color && c.color.trim() ? c.color : DEFAULT_CAT_COLOR
+}
+
 function activeStyle(c: Category): Record<string, string> | undefined {
   if (tasks.filter !== c.name) return undefined
   // 选中态不加投影：filterbar 横向滚动容器会裁掉投影，纯色底 + 白字已足够（与 .chip.active 的 CSS 一致）
-  return { background: c.color, 'border-color': c.color, color: '#fff' }
+  const color = catColor(c)
+  return { background: color, 'border-color': color, color: '#fff' }
 }
 
 /** 分类待办数 tag：非选中态数字用分类色、底色用分类色浅色；选中态（chip 已是分类纯色底）反白以示可读。 */
 function countStyle(c: Category, active: boolean): Record<string, string> {
-  return active
-    ? { color: '#fff', background: 'rgba(255,255,255,.25)' }
-    : { color: c.color, background: `color-mix(in srgb, ${c.color} 14%, transparent)` }
+  if (active) return { color: '#fff', background: 'rgba(255,255,255,.25)' }
+  const color = catColor(c)
+  return { color, background: `color-mix(in srgb, ${color} 14%, transparent)` }
 }
 
-/** 右键分类：删除该分类（分类下有任务会自动提示受影响数量）。 */
+/** 右键菜单的「删除分类」：打开确认框（分类下有任务会自动提示受影响数量）。 */
 function askDelete(c: Category): void {
   pendingDelete.value = c.name
 }
@@ -65,15 +91,22 @@ function doDelete(): void {
       <ScrollAreaViewport class="ui-scroll-viewport">
         <div class="filterbar">
           <div class="chip" :class="{ active: tasks.filter === 'all' }" @click="select('all')">全部</div>
-          <UiTooltip v-for="c in tasks.categories" :key="c.name" :text="`右键删除分类「${c.name}」`">
+          <ContextMenu
+            v-for="c in tasks.categories"
+            :key="c.name"
+            :items="catMenuItems"
+            :open-sub="null"
+            :flip-left="false"
+            @select="(key) => onCatAction(c, key)"
+          >
             <div
               class="chip"
               :class="{ active: tasks.filter === c.name }"
               :style="activeStyle(c)"
+              :title="`右键编辑或删除分类「${c.name}」`"
               @click="select(c.name)"
-              @contextmenu.prevent.stop="askDelete(c)"
             >
-              <span v-if="tasks.filter !== c.name" class="cat-dot" :style="{ background: c.color }" />
+              <span v-if="tasks.filter !== c.name" class="cat-dot" :style="{ background: catColor(c) }" />
               {{ c.name }}
               <span
                 v-if="tasks.categoryOpenCount(c.name) > 0"
@@ -81,7 +114,7 @@ function doDelete(): void {
                 :style="countStyle(c, tasks.filter === c.name)"
               >{{ tasks.categoryOpenCount(c.name) }}</span>
             </div>
-          </UiTooltip>
+          </ContextMenu>
           <button type="button" class="chip chip-add" title="添加分类" @click="showManager = true">
             <span class="chip-add-plus">+</span> 添加分类
           </button>
@@ -93,6 +126,8 @@ function doDelete(): void {
       <ScrollAreaCorner class="ui-scroll-corner" />
     </ScrollAreaRoot>
     <CategoryManagerDialog v-model:open="showManager" />
+    <!-- 右键编辑分类：复用添加弹框，传入 editName 进入改名/改色模式 -->
+    <CategoryManagerDialog v-model:open="showEditor" :edit-name="editingName" />
     <!-- 右键删除分类确认：有任务时给出受影响提示 -->
     <AlertDialogRoot :open="pendingDelete !== null" @update:open="(v) => { if (!v) pendingDelete = null }">
       <AlertDialogPortal>

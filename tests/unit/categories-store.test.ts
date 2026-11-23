@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia, storeToRefs } from 'pinia'
-import { commitCategories, useTaskStore } from '@/stores/tasks'
+import { commitCategories, editCategory, useTaskStore } from '@/stores/tasks'
 import { emptySnapshot } from '@/domain/snapshot'
 
 vi.mock('@/services/persistence', () => ({ scheduleSave: vi.fn(), flushSave: vi.fn() }))
@@ -86,6 +86,66 @@ describe('tasks.addCategories 分类管理', () => {
     })
     expect(store.categoryTaskCount('工作')).toBe(2)
     expect(store.categoryTaskCount('不存在')).toBe(0)
+  })
+
+  it('editCategory 改名迁移顶级+子任务分类、改色并写入快照', () => {
+    const store = useTaskStore()
+    const now = Date.now()
+    store.load({
+      version: 2, revision: 1, exportedAt: now, deviceId: 't', lastSyncAt: null,
+      categories: [
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now },
+        { name: '生活', color: '#5B8DEF', sortOrder: 1, updatedAt: now },
+      ],
+      tasks: [
+        { uid: 'a', parentUid: null, title: '父', category: '工作', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 0, sortOrder: 0 },
+        { uid: 'a1', parentUid: 'a', title: '子', category: '工作', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 1, sortOrder: 0 },
+        { uid: 'b', parentUid: null, title: '另一个', category: '生活', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 0, sortOrder: 1 },
+      ],
+    })
+    const refs = storeToRefs(store)
+    const res = editCategory(
+      { categories: refs.categories, root: refs.root, snapshot: refs.snapshot,
+        revision: refs.revision, deviceId: refs.deviceId, dirty: refs.dirty },
+      '工作', '职场', '#E86A5A',
+    )
+    expect(res.ok).toBe(true)
+    expect(store.categories.find((c) => c.name === '职场')?.color).toBe('#E86A5A')
+    expect(store.categories.some((c) => c.name === '工作')).toBe(false)
+    expect(store.root.find((n) => n.uid === 'a')!.category).toBe('职场')
+    expect(store.root.find((n) => n.uid === 'a')!.subs[0].category).toBe('职场')
+    expect(store.root.find((n) => n.uid === 'b')!.category).toBe('生活')
+    expect(store.snapshot.categories.map((c) => c.name)).toContain('职场')
+    expect(store.snapshot.tasks.find((t) => t.uid === 'a1')!.category).toBe('职场')
+    expect(store.dirty).toBe(true)
+  })
+
+  it('editCategory 仅改色不动任务分类；空名与重名被拒绝', () => {
+    const store = useTaskStore()
+    const now = Date.now()
+    store.load({
+      version: 2, revision: 1, exportedAt: now, deviceId: 't', lastSyncAt: null,
+      categories: [
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now },
+        { name: '生活', color: '#5B8DEF', sortOrder: 1, updatedAt: now },
+      ],
+      tasks: [
+        { uid: 'a', parentUid: null, title: '父', category: '工作', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 0, sortOrder: 0 },
+      ],
+    })
+    const refs = storeToRefs(store)
+    const ctx = { categories: refs.categories, root: refs.root, snapshot: refs.snapshot,
+      revision: refs.revision, deviceId: refs.deviceId, dirty: refs.dirty }
+
+    expect(editCategory(ctx, '工作', '   ', '#111111').ok).toBe(false)
+    expect(editCategory(ctx, '工作', '生活', '#111111').ok).toBe(false)
+    expect(editCategory(ctx, '不存在', '新名', '#111111').ok).toBe(false)
+    expect(store.categories.map((c) => c.name)).toEqual(['工作', '生活'])
+    expect(store.root[0].category).toBe('工作')
+
+    expect(editCategory(ctx, '工作', '工作', '#111111').ok).toBe(true)
+    expect(store.categories[0].color).toBe('#111111')
+    expect(store.root[0].category).toBe('工作')
   })
 
   it('removeCategory 清空引用任务分类、移除分类、回退当前筛选并返回受影响数', () => {

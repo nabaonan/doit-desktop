@@ -43,6 +43,8 @@ const adding = computed(() => tasks.inlineSubFor === props.node.uid)
 const expanded = computed(() => adding.value || (hasSubs.value && !tasks.collapsed[props.node.uid]))
 const ring = computed(() => subProgress(props.node))
 const cat = computed(() => tasks.categories.find((c) => c.name === props.node.category))
+// 兼容历史空色值：没有颜色的分类也要有可见的标签底色与圆点，不能退化成灰字
+const catColor = computed(() => cat.value?.color?.trim() ? cat.value.color : '#3FBB9C')
 const showCat = computed(() => !props.isSub && props.showCategory && Boolean(cat.value))
 
 function onCardClick(e: MouseEvent): void {
@@ -128,11 +130,12 @@ function onSubToggle(item: MenuItem, event: MouseEvent): void {
             <span
               v-if="showCat"
               class="cat-tag side-cat"
-              :style="cat
-                ? { color: cat.color, background: `color-mix(in srgb, ${cat.color} 14%, transparent)` }
-                : undefined"
+              :style="{
+                color: catColor,
+                background: `color-mix(in srgb, ${catColor} 14%, transparent)`,
+              }"
             >
-              <span class="cat-dot" :style="cat ? { background: cat.color } : undefined" />{{ cat?.name }}
+              <span class="cat-dot" :style="{ background: catColor }" />{{ cat?.name }}
             </span>
             <PriorityTag :value="props.node.priority" />
             <MiniRing v-if="ring" :pct="ring.pct" />

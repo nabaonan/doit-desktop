@@ -59,6 +59,52 @@ export function commitCategories(ctx: CategoryCtx, inputs: Array<{ name: string;
   return added
 }
 
+/**
+ * 编辑分类：改名 + 改色。任务按「分类名」关联，故改名时必须把所有引用旧名的任务
+ * （顶级 + 子任务，含已完成/墓碑）同步迁移，否则会留下孤儿分类。返回是否成功及原因。
+ */
+export function editCategory(
+  ctx: CategoryCtx,
+  oldName: string,
+  nextName: string,
+  color: string,
+): { ok: boolean; reason?: string } {
+  const name = nextName.trim()
+  if (!name) return { ok: false, reason: '分类名称不能为空' }
+  const target = ctx.categories.value.find((c) => c.name === oldName)
+  if (!target) return { ok: false, reason: '分类不存在' }
+  if (name !== oldName && ctx.categories.value.some((c) => c.name === name)) {
+    return { ok: false, reason: `分类「${name}」已存在` }
+  }
+
+  const now = Date.now()
+  target.name = name
+  target.color = color || DEFAULT_SETTINGS.progressColor
+  target.updatedAt = now
+
+  if (name !== oldName) {
+    const walk = (nodes: TaskNode[]) => {
+      for (const n of nodes) {
+        if (n.category === oldName) n.category = name
+        walk(n.subs ?? [])
+      }
+    }
+    walk(ctx.root.value)
+    ctx.root.value = [...ctx.root.value]
+  }
+
+  ctx.revision.value += 1
+  ctx.snapshot.value = toSnapshot(ctx.root.value, ctx.categories.value, {
+    revision: ctx.revision.value,
+    exportedAt: now,
+    deviceId: ctx.deviceId.value,
+    lastSyncAt: ctx.snapshot.value.lastSyncAt,
+  })
+  ctx.dirty.value = true
+  scheduleSave(ctx.snapshot.value)
+  return { ok: true }
+}
+
 export const useTaskStore = defineStore('tasks', () => {
   const snapshot = ref<SnapshotV2>(emptySnapshot())
   const root = ref<TaskNode[]>([])

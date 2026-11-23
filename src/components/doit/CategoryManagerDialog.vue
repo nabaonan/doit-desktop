@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from 'reka-ui'
 import { CATEGORY_SWATCHES } from '@/constants/tokens'
-import { commitCategories, useTaskStore } from '@/stores/tasks'
+import { commitCategories, editCategory, useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 
 /** 一行可编辑的分类草稿；key 仅用于本地稳定渲染，不写入快照。 */
@@ -20,14 +20,16 @@ interface DraftRow {
   color: string
 }
 
-const props = defineProps<{ open: boolean }>()
+/** editName 非空时为「编辑分类」模式：预填该分类并原地更新，否则为「添加分类」。 */
+const props = withDefaults(defineProps<{ open: boolean; editName?: string | null }>(), { editName: null })
 const emit = defineEmits<{ (e: 'update:open', value: boolean): void }>()
 
 const tasks = useTaskStore()
 const ui = useUIStore()
-// 用 storeToRefs 拿到 store 一直存在的响应式字段；写入走模块级 commitCategories，
+// 用 storeToRefs 拿到 store 一直存在的响应式字段；写入走模块级 commitCategories / editCategory，
 // 不依赖 store 实例上可能缺失的新增 action（兼容 HMR 保留的旧实例）。
 const { categories, root, snapshot, revision, deviceId, dirty } = storeToRefs(tasks)
+const catCtx = { categories, root, snapshot, revision, deviceId, dirty }
 
 let seq = 0
 const rows = ref<DraftRow[]>([])
@@ -44,7 +46,10 @@ watch(
   () => props.open,
   (open) => {
     if (open) {
-      rows.value = [makeRow()]
+      const editing = props.editName ? categories.value.find((c) => c.name === props.editName) : undefined
+      rows.value = editing
+        ? [{ key: seq++, name: editing.name, color: editing.color }]
+        : [makeRow()]
       openPaletteFor.value = null
       saving.value = false
       // 用 querySelector 聚焦第一行，避免函数式 ref 写入响应式数组
@@ -117,7 +122,21 @@ function save(): void {
       return
     }
 
-    const added = commitCategories({ categories, root, snapshot, revision, deviceId, dirty }, inputs)
+    if (props.editName) {
+      const next = inputs[0]
+      const res = editCategory(catCtx, props.editName, next.name, next.color)
+      if (!res.ok) {
+        ui.notify(res.reason ?? '保存失败')
+        return
+      }
+      // 若当前正筛着被改名的分类，同步切到新名，避免筛选落空
+      if (next.name !== props.editName && tasks.filter === props.editName) tasks.setFilter(next.name)
+      close()
+      ui.notify(`已保存分类「${next.name}」`)
+      return
+    }
+
+    const added = commitCategories(catCtx, inputs)
     close()
     if (added > 0) ui.notify(`已保存 ${added} 个分类`)
     else ui.notify('分类已存在，未重复添加')
@@ -137,8 +156,10 @@ function save(): void {
     <DialogPortal>
       <DialogOverlay class="dlg-overlay" />
       <DialogContent class="dlg-content cat-dialog">
-        <div class="modal-head"><b>添加分类</b></div>
-        <DialogDescription class="cat-dialog-desc">可一次添加多个分类，点颜色圆点选色，保存后生效。</DialogDescription>
+        <div class="modal-head"><b>{{ props.editName ? '编辑分类' : '添加分类' }}</b></div>
+        <DialogDescription class="cat-dialog-desc">{{ props.editName
+          ? '修改名称或颜色后保存，属于该分类的待办会同步更新。'
+          : '可一次添加多个分类，点颜色圆点选色，保存后生效。' }}</DialogDescription>
         <div class="modal-body cat-dialog-body">
           <div v-for="row in rows" :key="row.key" class="cat-edit-row" :data-cat-key="row.key">
             <!-- 颜色选择器入口：默认只显示当前颜色的圆点，点击才弹气泡展示全部颜色 -->
@@ -175,15 +196,15 @@ function save(): void {
               placeholder="分类名称"
               @keydown.enter="save"
             />
-            <button type="button" class="cat-row-del" title="移除此行" @click="removeRow(row.key)">×</button>
+            <button v-if="!props.editName" type="button" class="cat-row-del" title="移除此行" @click="removeRow(row.key)">×</button>
           </div>
-          <button type="button" class="cat-add-row" @click="addRow">+ 再加一个</button>
+          <button v-if="!props.editName" type="button" class="cat-add-row" @click="addRow">+ 再加一个</button>
         </div>
         <div class="modal-foot">
           <button type="button" class="btn ghost" @click="close">取消</button>
           <button type="button" class="btn accent" :disabled="saving" @click="save">保存</button>
         </div>
-        <DialogTitle class="sr-only">添加分类</DialogTitle>
+        <DialogTitle class="sr-only">{{ props.editName ? '编辑分类' : '添加分类' }}</DialogTitle>
       </DialogContent>
     </DialogPortal>
   </DialogRoot>
