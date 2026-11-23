@@ -24,9 +24,9 @@
     background:var(--glass); backdrop-filter:blur(20px) saturate(1.4);
     -webkit-backdrop-filter:blur(20px) saturate(1.4);display:flex;align-items:center;overflow:hidden}
   /* 一行内：logo(最左) → tab(左对齐成组) → 弹性空白 → 状态胶囊组(最右)，全程不换行。
-     宽度与 .page 对齐：全局 border-box，.page 总宽 1080（含 padding），故 tb-inner 也用 1080，
+     宽度与 .page 对齐：两者均铺满窗口宽度、只保留相同左右 padding（26px），
      保证“待办左缘 = 导航左缘、进度右缘 = 内容右缘” */
-  .tb-inner{width:100%;max-width:1080px;margin:0 auto;min-width:0;box-sizing:border-box;padding:0 26px;
+  .tb-inner{width:100%;min-width:0;box-sizing:border-box;padding:0 26px;
     display:flex;align-items:center;gap:18px;flex-wrap:nowrap;white-space:nowrap}
   .brand{display:flex;align-items:center;gap:10px;flex:0 0 auto}
   .brand .logo{width:34px;height:34px;border-radius:11px;
@@ -97,7 +97,7 @@
   /* 所有组件包在 #app 内：需自行承担 flex 列布局，使 #main 高度被限制到视口剩余、其内滚动 */
   #app{display:flex;flex-direction:column;height:100%;min-height:0}
   #main{flex:1;overflow:hidden;min-height:0}  /* Reka ScrollArea 根：内部 viewport 承担唯一滚动（body 已 overflow:hidden），min-height:0 保证 flex 内可收缩 */
-  .page{max-width:1080px;margin:0 auto;padding:30px 26px 40px;animation:fadeUp .35s ease both}
+  .page{width:100%;padding:30px 26px 40px;animation:fadeUp .35s ease both}
   .page-today{padding-bottom:104px}
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   @keyframes qaIn{from{opacity:0}to{opacity:1}}
@@ -235,7 +235,7 @@
   .breather .big{font-size:44px;margin-bottom:10px}
   /* 底部固定快速添加：低透明度毛玻璃浅色背景 + 主题色描边 + 明确投影，与下方待办列表明显区分 */
   .qa-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:20;
-    width:calc(100% - 44px);max-width:980px;display:flex;align-items:center;gap:10px;
+    width:calc(100% - 52px);display:flex;align-items:center;gap:10px;
     padding:11px 14px;border:1.5px solid var(--mint);border-radius:var(--radius);
     background:linear-gradient(180deg, color-mix(in srgb, var(--mint-soft) 55%, var(--card)), var(--card));
     backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
