@@ -109,6 +109,26 @@ function mergeTask(
 }
 
 function mergeCategory(local: Category, remote: Category, base: Category | null, conflicts: ConflictLog[]): Category {
+  const lDel = local.deletedAt
+  const rDel = remote.deletedAt
+  // 墓碑 vs 活记录（与 mergeTask 同语义，并向手机端 SyncMerge.mergeCategory 对齐）：
+  // 活记录最后一次动作晚于删除时间 → 编辑胜，撤销删除；否则删除生效（墓碑保留）。
+  if (lDel !== null || rDel !== null) {
+    if (lDel !== null && rDel !== null) {
+      return { ...remote, deletedAt: Math.max(lDel, rDel), updatedAt: Math.max(local.updatedAt, remote.updatedAt) }
+    }
+    const dead = lDel !== null ? local : remote
+    const live = lDel !== null ? remote : local
+    const deadAt = dead.deletedAt as number
+    const liveTime = Math.max(live.updatedAt || 0, live.deletedAt || 0)
+    if (liveTime > deadAt) {
+      // 删除之后对方又编辑过 → 恢复活记录
+      const restored = mergeRecord(live, remote, base, CATEGORY_FIELDS, live.name, live.updatedAt || 0, remote.updatedAt || 0, conflicts)
+      return { ...restored, name: live.name, deletedAt: null, updatedAt: Math.max(live.updatedAt, remote.updatedAt) }
+    }
+    // 删除生效：保留墓碑（含另一方字段取较近者）
+    return { ...dead, color: dead.color, sortOrder: dead.sortOrder, deletedAt: deadAt, updatedAt: Math.max(local.updatedAt, remote.updatedAt) }
+  }
   const merged = mergeRecord(
     local,
     remote,

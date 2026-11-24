@@ -75,6 +75,7 @@ export function normalizeSnapshot(s: SnapshotV2): SnapshotV2 {
       color: typeof c.color === 'string' ? c.color : '#3FBB9C',
       sortOrder: num(c.sortOrder, i),
       updatedAt: num(c.updatedAt, now),
+      deletedAt: nullableNum(c.deletedAt),
     }
   })
   return {

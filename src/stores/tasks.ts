@@ -30,7 +30,8 @@ export interface CategoryCtx {
 }
 
 export function commitCategories(ctx: CategoryCtx, inputs: Array<{ name: string; color: string }>): number {
-  const existing = new Set(ctx.categories.value.map((c) => c.name))
+  // 重名判断只针对「仍可见」的分类：墓碑（已删除）分类名可被复用，不阻塞重建同名分类
+  const existing = new Set(ctx.categories.value.filter((c) => c.deletedAt === null).map((c) => c.name))
   const now = Date.now()
   let added = 0
   for (const input of inputs) {
@@ -40,8 +41,10 @@ export function commitCategories(ctx: CategoryCtx, inputs: Array<{ name: string;
     ctx.categories.value.push({
       name,
       color: input.color || DEFAULT_SETTINGS.progressColor,
-      sortOrder: ctx.categories.value.length,
+      // 墓碑仍占位可能导致数组长度虚高，故基于可见分类个数计算 sortOrder
+      sortOrder: ctx.categories.value.filter((c) => c.deletedAt === null).length,
       updatedAt: now,
+      deletedAt: null,
     })
     added += 1
   }
@@ -73,7 +76,7 @@ export function editCategory(
   if (!name) return { ok: false, reason: '分类名称不能为空' }
   const target = ctx.categories.value.find((c) => c.name === oldName)
   if (!target) return { ok: false, reason: '分类不存在' }
-  if (name !== oldName && ctx.categories.value.some((c) => c.name === name)) {
+  if (name !== oldName && ctx.categories.value.some((c) => c.name === name && c.deletedAt === null)) {
     return { ok: false, reason: `分类「${name}」已存在` }
   }
 
@@ -123,7 +126,9 @@ export const useTaskStore = defineStore('tasks', () => {
   const todayNodes = computed(() => root.value.filter((n) => showInToday(n, 'all', today.value)))
   const stats = computed(() => todayStats(root.value, today.value))
   const visibleNodes = computed(() => root.value.filter((n) => showInToday(n, filter.value, today.value)))
-  const currentCategory = computed(() => (filter.value === 'all' ? categories.value[0]?.name ?? '' : filter.value))
+  const currentCategory = computed(() => (filter.value === 'all' ? visibleCategories.value[0]?.name ?? '' : filter.value))
+  /** 供 UI 展示的分类：排除删除墓碑（墓碑仅存在于快照契约，用于跨端同步合并识别删除）。 */
+  const visibleCategories = computed(() => categories.value.filter((c) => c.deletedAt === null))
 
   function rebuildIndex(): void {
     // 用 root 响应式树里的代理节点填充索引：index 是 shallowRef，若存原始对象，
@@ -316,10 +321,13 @@ export const useTaskStore = defineStore('tasks', () => {
 
   /**
    * 删除分类：把所有仍引用该分类且未删除的任务（顶级 + 子任务）的 category 置空（变为无分类），
-   * 从分类列表移除并重排 sortOrder；若当前筛的正是该分类则回退到「全部」。返回受影响任务数。
+   * 将分类标记为删除墓碑（deletedAt = now）而非物理移除——墓碑会随快照同步，
+   * 使手机端 / 桌面端合并时能识别"已被删除"，避免旧快照把它当新分类复活。
+   * 若当前筛的正是该分类则回退到「全部」。返回受影响任务数。
    */
   function removeCategory(name: string): number {
     let affected = 0
+    const now = Date.now()
     const walk = (nodes: TaskNode[]) => {
       for (const n of nodes) {
         if (n.deletedAt === null && n.category === name) { n.category = ''; affected += 1 }
@@ -327,7 +335,9 @@ export const useTaskStore = defineStore('tasks', () => {
       }
     }
     walk(root.value)
-    categories.value = categories.value.filter((c) => c.name !== name).map((c, i) => ({ ...c, sortOrder: i }))
+    // 墓碑式删除：保留分类条目并打删除标记，供同步契约把删除意图传到远端/其它设备
+    categories.value = categories.value.map((c) =>
+      c.name === name && c.deletedAt === null ? { ...c, deletedAt: now, updatedAt: now } : c)
     if (filter.value === name) filter.value = 'all'
     root.value = [...root.value]
     touch()
@@ -365,7 +375,7 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   return {
-    snapshot, root, index, categories, filter, collapsed, inlineEditFor, inlineSubFor,
+    snapshot, root, index, categories, visibleCategories, filter, collapsed, inlineEditFor, inlineSubFor,
     today, deviceId, revision, dirty,
     todayNodes, stats, visibleNodes, currentCategory,
     load, createTop, createSub, rename, setPriority, setCategory, toggleDone, remove, addCategories,

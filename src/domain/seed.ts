@@ -14,10 +14,10 @@ function mulberry32(seed: number): () => number {
 }
 
 const CATEGORIES: Category[] = [
-  { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: 0 },
-  { name: '生活', color: '#5B8DEF', sortOrder: 1, updatedAt: 0 },
-  { name: '学习', color: '#F2A65A', sortOrder: 2, updatedAt: 0 },
-  { name: '采购', color: '#C77DFF', sortOrder: 3, updatedAt: 0 },
+  { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: 0 , deletedAt: null },
+  { name: '生活', color: '#5B8DEF', sortOrder: 1, updatedAt: 0 , deletedAt: null },
+  { name: '学习', color: '#F2A65A', sortOrder: 2, updatedAt: 0 , deletedAt: null },
+  { name: '采购', color: '#C77DFF', sortOrder: 3, updatedAt: 0 , deletedAt: null },
 ]
 
 function task(partial: Partial<Task> & Pick<Task, 'uid' | 'title'>, now: number): Task {

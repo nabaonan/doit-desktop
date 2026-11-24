@@ -96,7 +96,7 @@ function doDelete(): void {
         <div class="filterbar">
           <div class="chip" :class="{ active: tasks.filter === 'all' }" @click="select('all')">全部</div>
           <ContextMenu
-            v-for="c in tasks.categories"
+            v-for="c in tasks.visibleCategories"
             :key="c.name"
             :items="catMenuItems"
             :open-sub="null"

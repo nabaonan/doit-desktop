@@ -8,7 +8,7 @@ import type { Category, SnapshotV2, Task, TaskNode } from '@/domain/types'
 
 const NOW = Date.now()
 const TODAY = startOfToday(NOW)
-const CATS: Category[] = [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW }]
+const CATS: Category[] = [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW , deletedAt: null }]
 
 function t(uid: string, patch: Partial<Task> = {}): Task {
   return {

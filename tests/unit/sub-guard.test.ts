@@ -13,7 +13,7 @@ describe('已完成父任务禁止添加子任务（回归）', () => {
     const today = new Date(new Date().setHours(0, 0, 0, 0)).getTime()
     store.load({
       version: 2, revision: 1, exportedAt: now, deviceId: 't', lastSyncAt: null,
-      categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now }],
+      categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now , deletedAt: null }],
       tasks: [{
         uid: 'd1', parentUid: null, title: '已完成', category: '工作', priority: 0,
         done: true, completedAt: today, createdAt: now, updatedAt: now, deletedAt: null, depth: 0, sortOrder: 0,

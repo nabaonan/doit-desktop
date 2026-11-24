@@ -17,10 +17,10 @@ const ranges: Array<{ id: StatsRange; label: string }> = [
 ]
 
 const counts = computed(() => dailyCounts(tasks.root, ui.range, tasks.today))
-const share = computed(() => categoryShare(tasks.root, ui.range, tasks.today, tasks.categories))
+const share = computed(() => categoryShare(tasks.root, ui.range, tasks.today, tasks.visibleCategories))
 const buckets = computed(() => trendBuckets(tasks.root, ui.range, tasks.today))
 const colors = computed<Record<string, string>>(() =>
-  Object.fromEntries(tasks.categories.map((c) => [c.name, c.color])))
+  Object.fromEntries(tasks.visibleCategories.map((c) => [c.name, c.color])))
 </script>
 
 <template>

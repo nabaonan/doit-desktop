@@ -21,7 +21,7 @@ describe('ConfirmDeleteDialog 删除回归：点确认后任务真实删除', ()
     const now = Date.now()
     store.load({
       version: 2, revision: 1, exportedAt: now, deviceId: 't', lastSyncAt: null,
-      categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now }],
+      categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now , deletedAt: null }],
       tasks: [{ uid: 'x1', parentUid: null, title: '任务A', category: '工作', priority: 1, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 0, sortOrder: 0 }],
     })
     expect(store.visibleNodes.length).toBe(1)

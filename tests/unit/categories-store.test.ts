@@ -77,7 +77,7 @@ describe('tasks.addCategories 分类管理', () => {
     const now = Date.now()
     store.load({
       version: 2, revision: 1, exportedAt: now, deviceId: 't', lastSyncAt: null,
-      categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now }],
+      categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now , deletedAt: null }],
       tasks: [
         { uid: 'a', parentUid: null, title: '父', category: '工作', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 0, sortOrder: 0 },
         { uid: 'a1', parentUid: 'a', title: '子', category: '工作', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 1, sortOrder: 0 },
@@ -94,8 +94,8 @@ describe('tasks.addCategories 分类管理', () => {
     store.load({
       version: 2, revision: 1, exportedAt: now, deviceId: 't', lastSyncAt: null,
       categories: [
-        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now },
-        { name: '生活', color: '#5B8DEF', sortOrder: 1, updatedAt: now },
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now , deletedAt: null },
+        { name: '生活', color: '#5B8DEF', sortOrder: 1, updatedAt: now , deletedAt: null },
       ],
       tasks: [
         { uid: 'a', parentUid: null, title: '父', category: '工作', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 0, sortOrder: 0 },
@@ -126,8 +126,8 @@ describe('tasks.addCategories 分类管理', () => {
     store.load({
       version: 2, revision: 1, exportedAt: now, deviceId: 't', lastSyncAt: null,
       categories: [
-        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now },
-        { name: '生活', color: '#5B8DEF', sortOrder: 1, updatedAt: now },
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now , deletedAt: null },
+        { name: '生活', color: '#5B8DEF', sortOrder: 1, updatedAt: now , deletedAt: null },
       ],
       tasks: [
         { uid: 'a', parentUid: null, title: '父', category: '工作', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 0, sortOrder: 0 },
@@ -148,14 +148,14 @@ describe('tasks.addCategories 分类管理', () => {
     expect(store.root[0].category).toBe('工作')
   })
 
-  it('removeCategory 清空引用任务分类、移除分类、回退当前筛选并返回受影响数', () => {
+  it('removeCategory 墓碑式删除：任务分类清空、快照保留墓碑、UI 可见列表移除、回退筛选', () => {
     const store = useTaskStore()
     const now = Date.now()
     store.load({
       version: 2, revision: 1, exportedAt: now, deviceId: 't', lastSyncAt: null,
       categories: [
-        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now },
-        { name: '生活', color: '#5B8DEF', sortOrder: 1, updatedAt: now },
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: now , deletedAt: null },
+        { name: '生活', color: '#5B8DEF', sortOrder: 1, updatedAt: now , deletedAt: null },
       ],
       tasks: [
         { uid: 'a', parentUid: null, title: '任务A', category: '工作', priority: 0, done: false, completedAt: null, createdAt: now, updatedAt: now, deletedAt: null, depth: 0, sortOrder: 0 },
@@ -166,8 +166,12 @@ describe('tasks.addCategories 分类管理', () => {
     store.setFilter('工作')
     const affected = store.removeCategory('工作')
     expect(affected).toBe(2)
-    expect(store.categories.map((c) => c.name)).toEqual(['生活'])
-    expect(store.categories[0].sortOrder).toBe(0)
+    // 墓碑保留在快照（同步需识别删除），但 UI 可见列表应只剩「生活」
+    expect(store.visibleCategories.map((c) => c.name)).toEqual(['生活'])
+    expect(store.visibleCategories[0].sortOrder).toBe(1)
+    // 快照里保留「工作」墓碑，供跨端合并识别删除
+    const tomb = store.categories.find((c) => c.name === '工作')!
+    expect(tomb.deletedAt).not.toBeNull()
     expect(store.filter).toBe('all')
     const a = store.root.find((n) => n.uid === 'a')!
     const a1 = a.subs.find((n) => n.uid === 'a1')!

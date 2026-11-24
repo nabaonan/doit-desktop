@@ -16,7 +16,7 @@ const input = ref<HTMLInputElement | null>(null)
 
 watch(
   () => tasks.filter,
-  (f) => { selected.value = f === 'all' ? tasks.categories[0]?.name ?? '' : f },
+  (f) => { selected.value = f === 'all' ? tasks.visibleCategories[0]?.name ?? '' : f },
 )
 
 function submit(): void {
@@ -24,7 +24,7 @@ function submit(): void {
   if (!title) { ui.notify('请输入待办内容'); input.value?.focus(); return }
   const category = selected.value && selected.value !== '全部'
     ? selected.value
-    : (tasks.filter !== 'all' ? tasks.filter : tasks.categories[0]?.name ?? '')
+    : (tasks.filter !== 'all' ? tasks.filter : tasks.visibleCategories[0]?.name ?? '')
   tasks.createTop(title, category, priority.value)
   draft.value = ''
   void nextTick(() => input.value?.focus())
@@ -40,7 +40,7 @@ function submit(): void {
       @keydown.enter.prevent="submit"
     />
     <div id="qaDD" class="qa-dd">
-      <CategoryDropdown v-model="selected" :options="tasks.categories" />
+      <CategoryDropdown v-model="selected" :options="tasks.visibleCategories" />
     </div>
   </div>
 </template>

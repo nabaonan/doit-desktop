@@ -25,7 +25,7 @@ export function useContextMenu(getNode: () => TaskNode | null) {
     }
     const cat: MenuItem = {
       key: 'cat', label: '改分类', icon: 'folder',
-      children: tasks.categories.map((c) => ({
+      children: tasks.visibleCategories.map((c) => ({
         key: c.name, label: c.name, color: c.color, current: node.category === c.name,
       })),
     }

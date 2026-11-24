@@ -5,7 +5,7 @@ import { mergeWithRemote, syncLocalWith } from '@/services/webdav'
 import type { Category, SnapshotV2, Task } from '@/domain/types'
 
 const NOW = 1700000000000
-const CATS: Category[] = [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW }]
+const CATS: Category[] = [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW , deletedAt: null }]
 
 function t(uid: string, patch: Partial<Task> = {}): Task {
   return {
@@ -100,22 +100,78 @@ describe('merge3', () => {
     expect(merged.snapshot.tasks).toHaveLength(2)
   })
 
+  it('墓碑式删除跨端传递：远端墓碑 vs 本地活跃 → 删除生效，分类不复活（复现用户链路）', () => {
+    // 用户复现链路：
+    //   桌/手机一端删分类「生活」（写墓碑）→ 同步到远端；
+    //   另一端本地仍是活跃「生活」、且同步过（有 base 也含活跃「生活」）→ 点同步。
+    // 期望：墓碑胜 → 合并结果里「生活」仍是墓碑，UI 层被过滤，不复活。
+    const base = snap([t('a')], {
+      categories: [
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW, deletedAt: null },
+        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW, deletedAt: null },
+      ],
+    })
+    const tomb = Date.now() // 删除发生在同步之后
+    const remote = snap([t('a')], {
+      categories: [
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW, deletedAt: null },
+        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW, deletedAt: tomb },
+      ],
+    })
+    const local = snap([t('a')], {
+      categories: [
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW, deletedAt: null },
+        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW, deletedAt: null },
+      ],
+    })
+    const merged = merge3(local, remote, base, { now: Date.now() })
+    const life = merged.snapshot.categories.find((c) => c.name === '生活')!
+    expect(life.deletedAt).not.toBeNull()
+  })
+
+  it('墓碑式删除跨端传递：本地墓碑 vs 远端活跃（旧快照未同步）→ 本地删除仍生效', () => {
+    const base = snap([t('a')], { categories: CATS })
+    const tomb = Date.now()
+    const local = snap([t('a')], {
+      categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW, deletedAt: tomb }],
+    })
+    const remote = snap([t('a')], { categories: CATS }) // 远端还是旧的活跃「工作」
+    const merged = merge3(local, remote, base, { now: Date.now() })
+    const w = merged.snapshot.categories.find((c) => c.name === '工作')!
+    expect(w.deletedAt).not.toBeNull()
+  })
+
+  it('墓碑 vs 活跃且活跃方在删除后编辑过 → 编辑胜，恢复分类', () => {
+    const base = snap([t('a')], { categories: CATS })
+    const tomb = Date.now()
+    const remote = snap([t('a')], {
+      categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW, deletedAt: tomb }],
+    })
+    const local = snap([t('a')], {
+      categories: [{ name: '工作', color: '#FF0000', sortOrder: 0, updatedAt: tomb + 100, deletedAt: null }],
+    })
+    const merged = merge3(local, remote, base, { now: Date.now() })
+    const w = merged.snapshot.categories.find((c) => c.name === '工作')!
+    expect(w.deletedAt).toBeNull()
+    expect(w.color).toBe('#FF0000')
+  })
+
   it('本地删除分类、远端仍是旧快照 → 删除生效，分类不复活', () => {
     const base = snap([t('a')], {
       categories: [
-        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW },
-        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW },
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW , deletedAt: null },
+        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW , deletedAt: null },
       ],
     })
     // 本地删除了「生活」，同时把引用它的任务分类清空
     const local = snap(
       [{ ...t('a'), category: '' }],
-      { categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW }] },
+      { categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW , deletedAt: null }] },
     )
     const remote = snap([t('a')], {
       categories: [
-        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW },
-        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW },
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW , deletedAt: null },
+        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW , deletedAt: null },
       ],
     })
     const merged = merge3(local, remote, base, { now: NOW })
@@ -128,7 +184,7 @@ describe('merge3', () => {
     const base = snap([t('a')], { categories: CATS })
     const local = snap([t('a')], { categories: CATS })
     const remote = snap([t('a')], {
-      categories: [CATS[0], { name: '学习', color: '#8A6DE9', sortOrder: 1, updatedAt: NOW + 50 }],
+      categories: [CATS[0], { name: '学习', color: '#8A6DE9', sortOrder: 1, updatedAt: NOW + 50 , deletedAt: null }],
     })
     const merged = merge3(local, remote, base, { now: NOW })
     const names = merged.snapshot.categories.map((c) => c.name)
@@ -140,8 +196,8 @@ describe('merge3', () => {
     const base = snap([t('a')], { categories: CATS })
     const local = snap([t('a')], { categories: [] })
     const remote = snap([t('a')], {
-      categories: [{ name: '工作', color: '#FF0000', sortOrder: 0, updatedAt: NOW + 30 }],
-    })
+      categories: [{ name: '工作', color: '#FF0000', sortOrder: 0, updatedAt: NOW + 30 , deletedAt: null }],
+    })    
     const merged = merge3(local, remote, base, { now: NOW })
     const names = merged.snapshot.categories.map((c) => c.name)
     expect(names).toContain('工作')
@@ -190,18 +246,18 @@ describe('syncLocalWith', () => {
   it('本地删除分类后同步，远端旧快照含该分类 → merged 快照不再包含被删分类', async () => {
     const base = snap([t('a')], {
       categories: [
-        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW },
-        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW },
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW , deletedAt: null },
+        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW , deletedAt: null },
       ],
     })
     const local = snap(
       [{ ...t('a'), category: '' }],
-      { categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW }] },
+      { categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW , deletedAt: null }] },
     )
     const remote = snap([t('a')], {
       categories: [
-        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW },
-        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW },
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW , deletedAt: null },
+        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW , deletedAt: null },
       ],
     })
     const outcome = syncLocalWith(local, remote, base, NOW)

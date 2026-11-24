@@ -13,6 +13,8 @@ export interface Category {
   color: string
   sortOrder: number
   updatedAt: number
+  /** 删除墓碑（与手机端 SyncCategory 契约一致）：同步合并需据此识别删除，避免被旧快照复活 */
+  deletedAt: number | null
 }
 
 export interface Task {
