@@ -44,24 +44,24 @@ export const DEFAULT_SETTINGS: AppSettings = {
 export const BREAKPOINTS = [1020, 860, 820, 768, 420, 360] as const
 
 /**
- * 分类内置色板 —— 以手机端（doit-apk）Color.kt 的 PaletteColors 为准，两端必须一致，
- * 否则同一个分类在手机端和桌面端会显示成不同颜色。顺序也保持一致（薄荷绿打头）。
+ * 分类内置色板 —— 与手机端（doit-apk）Color.kt 的 PaletteColors 严格一致，两端必须同步修改，
+ * 否则同一个分类会在两端显示成不同颜色。统一带 # 的 #RRGGBB，薄荷绿打头，整体清新。
  */
 export const DEFAULT_CATEGORY_COLORS = [
-  '#3FBB9C', '#5B9BD5', '#C9A24D', '#9186C9',
-  '#2BB89A', '#E0857A', '#5A7F95', '#64B0C9',
+  '#34C7A8', '#5AA9E6', '#F2A65A', '#A78BFA',
+  '#22B8CF', '#F08A8A', '#AACB5E', '#7C96B0',
 ] as const
 
 /** 分类颜色选择器的内置色板（同手机端 PaletteColors），点击色块即选中，无需自由取色。 */
 export const CATEGORY_SWATCHES = [
-  { name: '薄荷绿', value: '#3FBB9C' },
-  { name: '海蓝', value: '#5B9BD5' },
-  { name: '琥珀金', value: '#C9A24D' },
-  { name: '薰衣草紫', value: '#9186C9' },
-  { name: '青碧绿', value: '#2BB89A' },
-  { name: '珊瑚红', value: '#E0857A' },
-  { name: '雾蓝', value: '#5A7F95' },
-  { name: '天青蓝', value: '#64B0C9' },
+  { name: '薄荷绿', value: '#34C7A8' },
+  { name: '晴空蓝', value: '#5AA9E6' },
+  { name: '暖阳橙', value: '#F2A65A' },
+  { name: '薰衣草紫', value: '#A78BFA' },
+  { name: '青碧色', value: '#22B8CF' },
+  { name: '珊瑚粉', value: '#F08A8A' },
+  { name: '嫩芽绿', value: '#AACB5E' },
+  { name: '雾霭蓝', value: '#7C96B0' },
 ] as const
 
 /** Canvas 图表不能使用 CSS 变量，按主题提供与 tokens.css 同值的调色板。 */

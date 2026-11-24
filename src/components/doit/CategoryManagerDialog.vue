@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from 'reka-ui'
 import { CATEGORY_SWATCHES } from '@/constants/tokens'
+import { normalizeCategoryColor } from '@/domain/color'
 import { commitCategories, editCategory, useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 
@@ -48,7 +49,7 @@ watch(
     if (open) {
       const editing = props.editName ? categories.value.find((c) => c.name === props.editName) : undefined
       rows.value = editing
-        ? [{ key: seq++, name: editing.name, color: editing.color }]
+        ? [{ key: seq++, name: editing.name, color: normalizeCategoryColor(editing.color) }]
         : [makeRow()]
       openPaletteFor.value = null
       saving.value = false

@@ -13,12 +13,12 @@ function mulberry32(seed: number): () => number {
   }
 }
 
-/** 演示分类颜色取自手机端 PaletteColors；同名分类（工作/采购）与手机端种子保持一致。 */
+/** 演示分类颜色取自手机端 PaletteColors（两端共用一套）；同名分类（工作/采购）与手机端种子一致。 */
 const CATEGORIES: Category[] = [
-  { name: '工作', color: '#5B9BD5', sortOrder: 0, updatedAt: 0 , deletedAt: null },
-  { name: '生活', color: '#3FBB9C', sortOrder: 1, updatedAt: 0 , deletedAt: null },
-  { name: '学习', color: '#9186C9', sortOrder: 2, updatedAt: 0 , deletedAt: null },
-  { name: '采购', color: '#C9A24D', sortOrder: 3, updatedAt: 0 , deletedAt: null },
+  { name: '工作', color: '#5AA9E6', sortOrder: 0, updatedAt: 0 , deletedAt: null },
+  { name: '生活', color: '#34C7A8', sortOrder: 1, updatedAt: 0 , deletedAt: null },
+  { name: '学习', color: '#A78BFA', sortOrder: 2, updatedAt: 0 , deletedAt: null },
+  { name: '采购', color: '#F2A65A', sortOrder: 3, updatedAt: 0 , deletedAt: null },
 ]
 
 function task(partial: Partial<Task> & Pick<Task, 'uid' | 'title'>, now: number): Task {

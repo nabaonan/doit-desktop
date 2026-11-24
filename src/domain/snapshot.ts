@@ -1,3 +1,4 @@
+import { normalizeCategoryColor } from './color'
 import { appError } from './errors'
 import type { Category, Priority, Result, SnapshotMeta, SnapshotV2, Task, TaskNode } from './types'
 
@@ -72,7 +73,7 @@ export function normalizeSnapshot(s: SnapshotV2): SnapshotV2 {
     const c = raw as Category & Record<string, unknown>
     return {
       name: c.name,
-      color: typeof c.color === 'string' ? c.color : '#3FBB9C',
+      color: normalizeCategoryColor(c.color),
       sortOrder: num(c.sortOrder, i),
       updatedAt: num(c.updatedAt, now),
       deletedAt: nullableNum(c.deletedAt),

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, type Ref } from 'vue'
+import { normalizeCategoryColor } from '@/domain/color'
 import { startOfToday } from '@/domain/date'
 import { fromSnapshot, toSnapshot, validateSnapshot, emptySnapshot } from '@/domain/snapshot'
 import {
@@ -40,7 +41,7 @@ export function commitCategories(ctx: CategoryCtx, inputs: Array<{ name: string;
     existing.add(name)
     ctx.categories.value.push({
       name,
-      color: input.color || DEFAULT_SETTINGS.progressColor,
+      color: normalizeCategoryColor(input.color),
       // 墓碑仍占位可能导致数组长度虚高，故基于可见分类个数计算 sortOrder
       sortOrder: ctx.categories.value.filter((c) => c.deletedAt === null).length,
       updatedAt: now,
@@ -82,7 +83,7 @@ export function editCategory(
 
   const now = Date.now()
   target.name = name
-  target.color = color || DEFAULT_SETTINGS.progressColor
+  target.color = normalizeCategoryColor(color)
   target.updatedAt = now
 
   if (name !== oldName) {
