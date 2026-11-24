@@ -111,23 +111,28 @@ function mergeTask(
 function mergeCategory(local: Category, remote: Category, base: Category | null, conflicts: ConflictLog[]): Category {
   const lDel = local.deletedAt
   const rDel = remote.deletedAt
-  // 墓碑 vs 活记录（与 mergeTask 同语义，并向手机端 SyncMerge.mergeCategory 对齐）：
-  // 活记录最后一次动作晚于删除时间 → 编辑胜，撤销删除；否则删除生效（墓碑保留）。
+  // 墓碑 vs 活记录（并与手机端 SyncMerge.mergeCategory 语义对齐：
+  // 用「可见内容是否相对 base 真实变化」判断本地编辑，避免 updatedAt 因服务器回写被动刷新而误把已删分类复活）。
   if (lDel !== null || rDel !== null) {
     if (lDel !== null && rDel !== null) {
-      return { ...remote, deletedAt: Math.max(lDel, rDel), updatedAt: Math.max(local.updatedAt, remote.updatedAt) }
+      const newer = lDel >= rDel ? local : remote
+      return { ...newer, deletedAt: Math.max(lDel, rDel), updatedAt: Math.max(local.updatedAt, remote.updatedAt) }
     }
     const dead = lDel !== null ? local : remote
     const live = lDel !== null ? remote : local
     const deadAt = dead.deletedAt as number
-    const liveTime = Math.max(live.updatedAt || 0, live.deletedAt || 0)
-    if (liveTime > deadAt) {
-      // 删除之后对方又编辑过 → 恢复活记录
-      const restored = mergeRecord(live, remote, base, CATEGORY_FIELDS, live.name, live.updatedAt || 0, remote.updatedAt || 0, conflicts)
-      return { ...restored, name: live.name, deletedAt: null, updatedAt: Math.max(live.updatedAt, remote.updatedAt) }
+    // 本地是否有真实内容编辑（名称/颜色/排序相对 base 变化）—— 不看 updatedAt
+    const liveEdited = base
+      ? CATEGORY_FIELDS.some((f) => !same(live[f], base[f]))
+      : false
+    const deleteWins = !liveEdited || live.updatedAt <= deadAt
+    if (deleteWins) {
+      // 删除生效：保留墓碑（含另一方字段取较近者）
+      return { ...dead, color: dead.color, sortOrder: dead.sortOrder, deletedAt: deadAt, updatedAt: Math.max(local.updatedAt, remote.updatedAt) }
     }
-    // 删除生效：保留墓碑（含另一方字段取较近者）
-    return { ...dead, color: dead.color, sortOrder: dead.sortOrder, deletedAt: deadAt, updatedAt: Math.max(local.updatedAt, remote.updatedAt) }
+    // 本地在删除之后真正编辑过 → 编辑胜，恢复活记录
+    const restored = mergeRecord(live, remote, base, CATEGORY_FIELDS, live.name, live.updatedAt || 0, remote.updatedAt || 0, conflicts)
+    return { ...restored, name: live.name, deletedAt: null, updatedAt: Math.max(live.updatedAt, remote.updatedAt) }
   }
   const merged = mergeRecord(
     local,
