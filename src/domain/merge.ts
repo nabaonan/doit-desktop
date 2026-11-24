@@ -158,15 +158,24 @@ export function merge3(
   }
   tasks.sort((a, b) => (a.depth - b.depth) || (a.sortOrder - b.sortOrder) || a.uid.localeCompare(b.uid))
 
-  const catNames = [...new Set([...lCats.keys(), ...rCats.keys()])].sort()
+  const catNames = [...new Set([...lCats.keys(), ...rCats.keys(), ...bCats.keys()])].sort()
   const categories: Category[] = []
   for (const name of catNames) {
     const l = lCats.get(name)
     const r = rCats.get(name)
     const b = bCats.get(name) ?? null
-    if (l && r) categories.push(mergeCategory(l, r, b, conflicts))
-    else if (l) categories.push(l)
-    else if (r) categories.push(r)
+    if (l && r) {
+      categories.push(mergeCategory(l, r, b, conflicts))
+    } else if (l) {
+      categories.push(l)
+    } else if (r && b) {
+      // base 有、本地无 → 本地删除了该分类：
+      //   - 远端相对 base 没有更新（updatedAt 未变）→ 删除生效，不复活；
+      //   - 远端相对 base 更新过（改色/改名）→ 远端编辑胜，恢复分类。
+      if ((r.updatedAt ?? 0) > (b.updatedAt ?? 0)) categories.push(r)
+    } else if (r) {
+      categories.push(r)
+    }
   }
 
   const snapshot: SnapshotV2 = {

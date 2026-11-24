@@ -100,6 +100,54 @@ describe('merge3', () => {
     expect(merged.snapshot.tasks).toHaveLength(2)
   })
 
+  it('本地删除分类、远端仍是旧快照 → 删除生效，分类不复活', () => {
+    const base = snap([t('a')], {
+      categories: [
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW },
+        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW },
+      ],
+    })
+    // 本地删除了「生活」，同时把引用它的任务分类清空
+    const local = snap(
+      [{ ...t('a'), category: '' }],
+      { categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW }] },
+    )
+    const remote = snap([t('a')], {
+      categories: [
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW },
+        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW },
+      ],
+    })
+    const merged = merge3(local, remote, base, { now: NOW })
+    const names = merged.snapshot.categories.map((c) => c.name)
+    expect(names).toEqual(['工作'])
+    expect(names).not.toContain('生活')
+  })
+
+  it('远端新增分类、本地无 → 保留远端新增分类', () => {
+    const base = snap([t('a')], { categories: CATS })
+    const local = snap([t('a')], { categories: CATS })
+    const remote = snap([t('a')], {
+      categories: [CATS[0], { name: '学习', color: '#8A6DE9', sortOrder: 1, updatedAt: NOW + 50 }],
+    })
+    const merged = merge3(local, remote, base, { now: NOW })
+    const names = merged.snapshot.categories.map((c) => c.name)
+    expect(names).toContain('工作')
+    expect(names).toContain('学习')
+  })
+
+  it('本地删除分类、远端同名分类相对 base 有更新 → 远端编辑胜（恢复分类）', () => {
+    const base = snap([t('a')], { categories: CATS })
+    const local = snap([t('a')], { categories: [] })
+    const remote = snap([t('a')], {
+      categories: [{ name: '工作', color: '#FF0000', sortOrder: 0, updatedAt: NOW + 30 }],
+    })
+    const merged = merge3(local, remote, base, { now: NOW })
+    const names = merged.snapshot.categories.map((c) => c.name)
+    expect(names).toContain('工作')
+    expect(merged.snapshot.categories.find((c) => c.name === '工作')?.color).toBe('#FF0000')
+  })
+
   it('完成态自洽：未完成不保留 completedAt', () => {
     const base = snap([t('a')])
     const local = snap([{ ...t('a'), done: false }])
@@ -137,5 +185,26 @@ describe('syncLocalWith', () => {
     const outcome = syncLocalWith(local, null, null, NOW)
     expect(outcome.changed).toBe(0)
     expect(outcome.snapshot.tasks).toHaveLength(1)
+  })
+
+  it('本地删除分类后同步，远端旧快照含该分类 → merged 快照不再包含被删分类', async () => {
+    const base = snap([t('a')], {
+      categories: [
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW },
+        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW },
+      ],
+    })
+    const local = snap(
+      [{ ...t('a'), category: '' }],
+      { categories: [{ name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW }] },
+    )
+    const remote = snap([t('a')], {
+      categories: [
+        { name: '工作', color: '#3FBB9C', sortOrder: 0, updatedAt: NOW },
+        { name: '生活', color: '#F2A65A', sortOrder: 1, updatedAt: NOW },
+      ],
+    })
+    const outcome = syncLocalWith(local, remote, base, NOW)
+    expect(outcome.snapshot.categories.map((c) => c.name)).toEqual(['工作'])
   })
 })
