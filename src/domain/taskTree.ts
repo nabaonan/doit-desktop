@@ -1,5 +1,5 @@
 import { isSameDay, startOfToday } from './date'
-import type { Priority, TaskNode } from './types'
+import type { Priority, SnapshotV2, Task, TaskNode } from './types'
 
 export function newUid(): string {
   const c = globalThis.crypto
@@ -66,6 +66,55 @@ export function recalcUp(uid: string, index: Map<string, TaskNode>, today = star
     }
     current = parent
   }
+}
+
+/**
+ * 修复历史快照里的父任务完成态：有效子任务（墓碑及其子树不算）全完成，但父任务仍是未完成。
+ * 删除子任务时若没有触发 recalcUp 就会发现这种脏数据；同步合并拉入墓碑时同样可能出现。
+ * 自底向上修，已被墓碑父节点遮住的后代不计入任何父任务的完成判定。
+ * 返回新快照（无变化时原样返回），调用方在 load / 同步写回前使用。
+ */
+export function repairSnapshotTasks(s: SnapshotV2, today = startOfToday(), now = Date.now()): { snapshot: SnapshotV2; changed: number } {
+  const byUid = new Map(s.tasks.map((t) => [t.uid, t]))
+  const isLive = (t: Task): boolean => {
+    if (t.deletedAt !== null) return false
+    const seen = new Set<string>([t.uid])
+    let parentUid = t.parentUid
+    while (parentUid) {
+      if (seen.has(parentUid)) return false
+      seen.add(parentUid)
+      const parent = byUid.get(parentUid)
+      if (!parent || parent.deletedAt !== null) return false
+      parentUid = parent.parentUid
+    }
+    return true
+  }
+  const children = new Map<string, Task[]>()
+  for (const t of s.tasks) {
+    if (!t.parentUid || !isLive(t)) continue
+    const list = children.get(t.parentUid) ?? []
+    list.push(t)
+    children.set(t.parentUid, list)
+  }
+  const patched = new Map<string, Task>()
+  let changed = 0
+  const walk = (t: Task): void => {
+    const kids = children.get(t.uid) ?? []
+    for (const kid of kids) walk(kid)
+    if (!kids.length) return
+    // 用修完后的子任务状态判父任务，避免祖孙两级同时脏时只修一层。
+    const all = kids.every((kid) => (patched.get(kid.uid) ?? kid).done)
+    if (all && !t.done) {
+      patched.set(t.uid, { ...t, done: true, completedAt: today, updatedAt: Math.max(now, t.updatedAt) })
+      changed += 1
+    } else if (!all && t.done) {
+      patched.set(t.uid, { ...t, done: false, completedAt: null, updatedAt: Math.max(now, t.updatedAt) })
+      changed += 1
+    }
+  }
+  for (const t of s.tasks) if (!t.parentUid) walk(t)
+  if (!changed) return { snapshot: s, changed: 0 }
+  return { snapshot: { ...s, tasks: s.tasks.map((t) => patched.get(t.uid) ?? t) }, changed }
 }
 
 /** 今日待办：顶级任务、非墓碑、按筛选、未完成或今日完成。 */

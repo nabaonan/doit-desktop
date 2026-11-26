@@ -9,6 +9,7 @@ import {
   markDeleted,
   newUid,
   recalcUp,
+  repairSnapshotTasks,
   showInToday,
   sortTopByPriority,
   todayStats,
@@ -171,7 +172,9 @@ export const useTaskStore = defineStore('tasks', () => {
 
   function load(input: SnapshotV2): void {
     const check = validateSnapshot(input)
-    const safe = check.ok ? input : emptySnapshot()
+    // 历史数据里删子任务没重算父任务时会留下"子任务全完成、父任务未完成"的脏状态，
+    // 载入与同步合并后统一自愈，避免父任务永远卡在未完成。
+    const safe = repairSnapshotTasks(check.ok ? input : emptySnapshot(), today.value).snapshot
     const parsed = fromSnapshot(safe)
     root.value = parsed.root
     categories.value = parsed.categories
@@ -290,6 +293,8 @@ export const useTaskStore = defineStore('tasks', () => {
 
   function remove(uid: string): void {
     markDeleted(uid, index.value, nowStamp())
+    // 删除子任务后剩余子任务可能已全部完成，必须冒起重算父任务（历史 bug：删完不重算）。
+    recalcUp(uid, index.value, today.value)
     root.value = [...root.value]
     touch()
   }

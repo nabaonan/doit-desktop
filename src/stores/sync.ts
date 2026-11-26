@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { listen } from '@tauri-apps/api/event'
 import { appError } from '@/domain/errors'
 import { merge3 } from '@/domain/merge'
+import { repairSnapshotTasks } from '@/domain/taskTree'
 import { invokeCommand, isTauri } from '@/services/ipc'
 import { testWebDav } from '@/services/webdav'
 import { useTaskStore } from './tasks'
@@ -76,9 +77,11 @@ export const useSyncStore = defineStore('sync', () => {
         .map((t) => t.uid)
       try {
         const result = merge3(tasks.toSnapshotValue(), p.remote, p.base ?? null, { now: Date.now() })
-        const saved = await invokeCommand('save_snapshot', { snapshot: result.snapshot })
+        // 合并可能带来新的墓碑或远端已完成任务，上传前先校正父任务完成态，避免把脏状态推给其它端。
+        const healed = repairSnapshotTasks(result.snapshot, tasks.today).snapshot
+        const saved = await invokeCommand('save_snapshot', { snapshot: healed })
         if (!saved.ok) throw new Error(saved.error.message)
-        tasks.load(result.snapshot)
+        tasks.load(healed)
         ui.notify(`已合并 ${result.changed} 条变更`)
       } catch (e) {
         error.value = appError('E_CONFLICT_MERGE', e instanceof Error ? e.message : '合并失败')

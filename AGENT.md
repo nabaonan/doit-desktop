@@ -166,7 +166,8 @@ off → error → syncing → ready → dirty → synced
 - `index` 是 `shallowRef` 存原始对象；改动必须从 `root.value` 取响应式代理（`mutableNode()`），否则“数据已写、视图不刷新”
 - 分类写入使用模块级 `commitCategories()` / `editCategory()`，为兼容 HMR 残留的旧 store 实例
 - 删除一律 `deletedAt = now`，禁止物理删除
-- 父任务完成态由 `recalcUp()` 按有效子任务推导；已完成不可回滚
+- 父任务完成态由 `recalcUp()` 按有效子任务推导；已完成不可回滚；**删除子任务后必须 `recalcUp`**（否则最后一个未完成任务被删掉时父任务永远卡在未完成）
+- `repairSnapshotTasks()` 在 `load()` 与同步写回前自愈历史脏数据：墓碑子任务不算有效子任务，父任务完成态与有效子任务不一致时自动修正；同步合并后先修再 `save_snapshot`，避免把脏状态推给其它端
 - 分类写入时统一归一化颜色，避免历史值回显失败
 
 ## 6. 安全边界
