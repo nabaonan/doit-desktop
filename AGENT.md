@@ -154,6 +154,7 @@ off → error → syncing → ready → dirty → synced
 ### 5.2 今日与统计口径
 
 - `showInToday()` 只算顶级非墓碑任务：`!done || completedAt` 与今天同一本地日
+- `tasks.today` 是启动时的缓存值：跨午夜后必须由 `App.vue` 的定时器（60s）/ 窗口 focus / `visibilitychange` 调 `refreshToday()` 校正，否则会一直显示昨天完成的任务，与 gpui/tui 实时取日期的口径不一致
 - `sortTopByPriority()` 仅重排今日列表的**顶级**任务（4→0，稳定排序），子任务顺序与引用不动；开关 `settings.sortByPriority` 是本地 UI 偏好，不进同步快照
 - 「紧急优先」开关在 `StatusPills.vue` 顶栏同步胶囊**左侧**（仅 `page === 'today'` 显示），用 `var(--prio-urgent)` 红色，不放进分类导航；窄屏隐藏文字只留旗标 + tooltip
 - 顶栏进度环恒用 `'all'` 口径，与分类筛选解耦

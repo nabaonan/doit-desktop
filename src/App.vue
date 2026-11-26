@@ -44,11 +44,28 @@ function onBeforeUnload(): void {
   void flushSave()
 }
 
+// 今日待办按本地日期过滤；启动后一直开着时 today 会停留在昨天，
+// 导致跨午夜后仍显示昨天已完成的任务（gpui/tui 每次渲染实时取日期，表现不同）。
+let todayTimer: number | undefined
+function refreshToday(): void {
+  tasks.refreshToday()
+}
+
 onMounted(() => {
   void bootstrap()
   window.addEventListener('beforeunload', onBeforeUnload)
+  // 页面重新获得焦点 / 从后台切回时立即校正日期
+  window.addEventListener('focus', refreshToday)
+  document.addEventListener('visibilitychange', refreshToday)
+  // 兜底：即使窗口一直前台且无焦点变化，也每分钟校正一次
+  todayTimer = window.setInterval(refreshToday, 60_000)
 })
-onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', onBeforeUnload)
+  window.removeEventListener('focus', refreshToday)
+  document.removeEventListener('visibilitychange', refreshToday)
+  if (todayTimer !== undefined) window.clearInterval(todayTimer)
+})
 </script>
 
 <template>
