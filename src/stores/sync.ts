@@ -38,6 +38,8 @@ export const useSyncStore = defineStore('sync', () => {
   // 开关已开但从未验证时，状态显示「已开启暂未同步」而不是误导性的「已与远程同步」。
   const verified = ref(false)
   const progress = ref('')
+  /** 本次同步拿到的远端活跃任务 uid，用于在报告 synced 前核对合并结果。 */
+  const pendingRemoteUids = ref<string[]>([])
 
   const kind = computed<SyncStateKind>(() => {
     if (manualOff.value || !settings.webdav.enabled) return 'off'
@@ -69,6 +71,9 @@ export const useSyncStore = defineStore('sync', () => {
       const p = event.payload
       progress.value = `${p.phase} ${p.percent}%`
       if (p.phase !== 'merge-required' || !p.remote) return
+      pendingRemoteUids.value = p.remote.tasks
+        .filter((t) => t.deletedAt === null)
+        .map((t) => t.uid)
       try {
         const result = merge3(tasks.toSnapshotValue(), p.remote, p.base ?? null, { now: Date.now() })
         const saved = await invokeCommand('save_snapshot', { snapshot: result.snapshot })
@@ -82,12 +87,27 @@ export const useSyncStore = defineStore('sync', () => {
     await listen<StatePayload>('sync://state', (event) => {
       const s = event.payload
       if (s.kind === 'syncing') syncing.value = true
-      else if (s.kind === 'synced') { syncing.value = false; markSynced(); lastSyncAt.value = s.lastSyncAt }
-      else if (s.kind === 'error') {
+      else if (s.kind === 'synced') {
         syncing.value = false
+        // 远端有、本地连墓碑都没有的任务必须出现在合并结果里。
+        // 否则说明握手拿到的不是本次 merge 的结果，不能谎报"已同步"。
+        const localUids = new Set(tasks.snapshot.tasks.map((t) => t.uid))
+        const missed = pendingRemoteUids.value.filter((uid) => !localUids.has(uid))
+        pendingRemoteUids.value = []
+        if (missed.length) {
+          ui.notify(`同步未完成：${missed.length} 条远端任务未合并，请重试`)
+          error.value = appError('E_CONFLICT_MERGE', `${missed.length} 条远端任务未进入本地快照`)
+          return
+        }
+        markSynced()
+        lastSyncAt.value = s.lastSyncAt
+      } else if (s.kind === 'error') {
+        syncing.value = false
+        pendingRemoteUids.value = []
         error.value = s.error
           ? { code: s.error.code as ErrorCode, message: s.error.message }
           : appError('E_UNKNOWN')
+        ui.notify(`同步失败：${error.value.message}`)
       } else { syncing.value = false }
     })
   }
@@ -103,6 +123,7 @@ export const useSyncStore = defineStore('sync', () => {
     }
     syncing.value = true
     error.value = null
+    pendingRemoteUids.value = []
     try {
       const result = await invokeCommand<{ jobId: string }>('sync_now')
       if (!result.ok) {

@@ -84,6 +84,10 @@ async fn do_sync(
     let base_snapshot = crate::storage::snapshot::read_base(app);
 
     let local = if let Some(remote_value) = remote {
+        // 先注册合并握手再发事件：若前端合并极快，save_snapshot 的 notify_saved
+        // 可能早于 receiver 注册；那样会白等 30s 并把本次同步判为失败，
+        // 表现为「提示同步异常/没有把远端任务拉下来」。
+        let rx = sync.begin_merge();
         // 把原始 remote + base 交给前端合并；Rust 不解析、不改写快照内容。
         sync.emit_progress(
             app,
@@ -93,7 +97,6 @@ async fn do_sync(
             Some(remote_value),
             Some(base_snapshot),
         );
-        let rx = sync.begin_merge();
         match tokio::time::timeout(MERGE_WAIT_TIMEOUT, rx).await {
             Ok(Ok(())) => {}
             _ => {

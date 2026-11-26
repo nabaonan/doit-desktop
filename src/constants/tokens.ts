@@ -31,6 +31,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'light',
   skin: 'mint',
   progressColor: PROG_COLORS[0].value,
+  sortByPriority: false,
   webdav: {
     enabled: false,
     url: '',

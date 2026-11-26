@@ -66,6 +66,8 @@ export interface AppSettings {
   theme: ThemeName
   skin: SkinName
   progressColor: string
+  /** 今日待办是否按顶级任务优先级排序（4 紧急在最前）；仅本地 UI 偏好，不进同步快照。 */
+  sortByPriority: boolean
   webdav: WebDavConfig
 }
 

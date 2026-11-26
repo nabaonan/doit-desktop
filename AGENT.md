@@ -101,6 +101,8 @@ interface Category { name, color, sortOrder, updatedAt, deletedAt }
 2. 后台：`PROPFIND` 探测 → `GET doit-backup.json`（404 = 无远端文件）→ 读 `sync-base.json`
 3. 有远端时 emit `sync://progress { phase: 'merge-required', remote, base }`，并用 oneshot 等待前端（30s 超时）
 4. 前端 `stores/sync.ts` 调 `merge3(local, remote, base)`，再调 `save_snapshot(merged)` 唤醒 Rust
+   - **必须先 `begin_merge()` 再 emit `merge-required`**：否则前端极快保存时 `notify_saved` 找不到 receiver，会白等 30s 并误报同步失败
+   - 前端保存 `synced` 前会核对：远端非墓碑任务必须全部出现在本地快照里，否则报「远端任务未合并」而不是谎报成功
 5. Rust 读回主文件 → `PUT` → 写 `sync-base.json` → emit `sync://state = synced`
 
 密码优先取 IPC 内存入参，否则按 `passwordRef` 从系统钥匙串读取。`danger_accept_invalid_certs` 默认 false；底层 `reqwest::Error` 的 Display 不得外传。
@@ -110,7 +112,7 @@ interface Category { name, color, sortOrder, updatedAt, deletedAt }
 1. 按 uid（任务）/ name（分类）取并集
 2. 仅本地相对 base 变 → 本地；仅远端变 → 远端
 3. 两边都变且不同：`effectiveTime = max(updatedAt, completedAt, deletedAt, createdAt)`，较新者胜，**平局远程优先**
-4. `isStaleRemote()`：`remote.exportedAt < local.exportedAt && remote.revision <= local.revision` 时直接本地胜并强制 PUT
+4. `isStaleRemote()`：`remote.exportedAt < local.exportedAt && remote.revision <= local.revision` 时本地胜并强制 PUT，但**远端独有新任务仍要并入**（否则 TUI 刚新增的任务会因时钟/版本号落后被永久丢弃；本地墓碑任务保持删除）
 5. 墓碑：删除后对方又有真实编辑才复活，否则取较新的 `deletedAt`
 6. 分类墓碑：用可见字段（color / sortOrder）相对 base 的变化判断“真实编辑”，**绝不能用 `updatedAt`**（同步回写会污染它，导致已删分类复活）
 7. 输出 `revision = max(L,R)+1`，`putRequired = fingerprint(merged) !== fingerprint(remote)`
@@ -152,6 +154,7 @@ off → error → syncing → ready → dirty → synced
 ### 5.2 今日与统计口径
 
 - `showInToday()` 只算顶级非墓碑任务：`!done || completedAt` 与今天同一本地日
+- `sortTopByPriority()` 仅重排今日列表的**顶级**任务（4→0，稳定排序），子任务顺序与引用不动；开关 `settings.sortByPriority` 是本地 UI 偏好，不进同步快照
 - 顶栏进度环恒用 `'all'` 口径，与分类筛选解耦
 - `completedTop()` 只数区间内已完成的顶级非墓碑任务；week=7 / month=30 / year=365 天（含今天）
 - `categoryShare()` 必须给全部分类补 0；已删分类若区间内仍有完成记录则保留

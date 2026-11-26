@@ -137,6 +137,9 @@
     font-family:inherit;white-space:nowrap}
   .chip-add:hover{border-color:var(--mint);color:var(--mint-deep);background:var(--mint-soft)}
   .chip-add-plus{font-size:16px;line-height:1;font-weight:500;margin-right:1px}
+  /* 今日页优先级排序开关：与分类胶囊同一行，选中态复用 .chip.active 的实心样式 */
+  .chip-sort{border:1px dashed var(--ink-3);background:transparent;color:var(--ink-2);white-space:nowrap}
+  .chip-sort:hover,.chip-sort.active{border-style:solid}
 
   /* ============ 任务卡片 ============ */
   .task{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);

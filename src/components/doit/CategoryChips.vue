@@ -121,6 +121,16 @@ function doDelete(): void {
           <button type="button" class="chip chip-add" title="添加分类" @click="showManager = true">
             <span class="chip-add-plus">+</span> 添加分类
           </button>
+          <button
+            type="button"
+            class="chip chip-sort"
+            :class="{ active: tasks.sortByPriority }"
+            :aria-pressed="tasks.sortByPriority"
+            :title="tasks.sortByPriority ? '已按优先级排序顶级任务 · 点击恢复手动顺序' : '按优先级排序顶级任务（紧急在最前，子任务顺序不变）'"
+            @click="tasks.toggleSortByPriority()"
+          >
+            <span class="chip-add-plus">↑</span> 紧急优先
+          </button>
         </div>
       </ScrollAreaViewport>
       <ScrollAreaScrollbar orientation="horizontal" class="ui-scrollbar ui-scrollbar--h" force-mount>

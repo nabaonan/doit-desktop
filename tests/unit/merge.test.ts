@@ -233,6 +233,45 @@ describe('merge3', () => {
     expect(result.snapshot.tasks[0].uid).toBe('a')
     expect(result.putRequired).toBe(true)
   })
+
+  it('陈旧远端也不能丢掉远端独有的新任务', () => {
+    const local = snap([t('a')], { revision: 10, exportedAt: NOW })
+    const remote = snap(
+      [t('a'), t('tui-new', { done: true, completedAt: NOW - 1000, updatedAt: NOW - 1000 })],
+      { revision: 3, exportedAt: NOW - 1000 },
+    )
+    const result = mergeWithRemote(local, remote, null, NOW)
+    const pulled = result.snapshot.tasks.find((x) => x.uid === 'tui-new')
+    expect(pulled).toBeDefined()
+    expect(pulled?.done).toBe(true)
+    expect(result.snapshot.tasks.find((x) => x.uid === 'a')?.title).toBe('任务 a')
+  })
+
+  it('TUI 新建后立即完成的顶级任务，桌面端同步必须拉下来', () => {
+    // 复现用户场景：TUI 新增顶级任务 → 立即按空格完成 → s 同步 → 桌面端点同步。
+    // 远端独有的已完成任务必须并入本地；完成时间与优先级原样保留。
+    const base = snap([t('old')])
+    const local = snap([t('old')], { revision: 8, exportedAt: NOW - 5000 })
+    const remote = snap(
+      [
+        t('old'),
+        t('tui-done', {
+          title: '终端新建并完成',
+          done: true,
+          completedAt: NOW - 100,
+          updatedAt: NOW - 100,
+          priority: 4,
+        }),
+      ],
+      { revision: 9, exportedAt: NOW },
+    )
+    const merged = merge3(local, remote, base, { now: NOW }).snapshot
+    const pulled = merged.tasks.find((x) => x.uid === 'tui-done')
+    expect(pulled).toMatchObject({ done: true, completedAt: NOW - 100, priority: 4, parentUid: null })
+    // showInToday 的口径：顶级、非墓碑、当天完成 → 今日列表可见
+    expect(pulled!.deletedAt).toBeNull()
+    expect(new Date(pulled!.completedAt!).toDateString()).toBe(new Date(NOW).toDateString())
+  })
 })
 
 describe('syncLocalWith', () => {

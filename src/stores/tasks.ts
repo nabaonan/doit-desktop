@@ -10,9 +10,11 @@ import {
   newUid,
   recalcUp,
   showInToday,
+  sortTopByPriority,
   todayStats,
 } from '@/domain/taskTree'
 import { scheduleSave } from '@/services/persistence'
+import { useSettingsStore } from './settings'
 import type { AppSettings, Category, Priority, SnapshotV2, TaskNode } from '@/domain/types'
 import { DEFAULT_SETTINGS } from '@/constants/tokens'
 
@@ -119,6 +121,8 @@ export const useTaskStore = defineStore('tasks', () => {
   const inlineEditFor = ref<string | null>(null)
   const inlineSubFor = ref<string | null>(null)
   const today = ref(startOfToday())
+  /** 今日列表的优先级排序开关（本地偏好，持久化在 settings.json）。 */
+  const sortByPriority = ref(false)
   const deviceId = ref('doit-desktop')
   const revision = ref(0)
   const dirty = ref(false)
@@ -126,7 +130,9 @@ export const useTaskStore = defineStore('tasks', () => {
   /** 顶栏进度环：恒按「今日全部」口径，与筛选解耦。 */
   const todayNodes = computed(() => root.value.filter((n) => showInToday(n, 'all', today.value)))
   const stats = computed(() => todayStats(root.value, today.value))
-  const visibleNodes = computed(() => root.value.filter((n) => showInToday(n, filter.value, today.value)))
+  const visibleNodes = computed(() =>
+    sortTopByPriority(root.value.filter((n) => showInToday(n, filter.value, today.value)), sortByPriority.value),
+  )
   const currentCategory = computed(() => (filter.value === 'all' ? visibleCategories.value[0]?.name ?? '' : filter.value))
   /** 供 UI 展示的分类：排除删除墓碑（墓碑仅存在于快照契约，用于跨端同步合并识别删除）。 */
   const visibleCategories = computed(() => categories.value.filter((c) => c.deletedAt === null))
@@ -300,6 +306,17 @@ export const useTaskStore = defineStore('tasks', () => {
     )
   }
 
+  /** 今日待办优先级排序：只影响展示顺序，不写任务快照；偏好落 settings.json。 */
+  function setSortByPriority(enabled: boolean): void {
+    sortByPriority.value = enabled
+  }
+
+  function toggleSortByPriority(): void {
+    const next = !sortByPriority.value
+    sortByPriority.value = next
+    void useSettingsStore().patch({ sortByPriority: next })
+  }
+
   function setFilter(next: string): void {
     // 与原型一致：切换分类即退出内联添加 / 编辑态，避免输入框跨分类残留
     inlineEditFor.value = null
@@ -377,10 +394,10 @@ export const useTaskStore = defineStore('tasks', () => {
 
   return {
     snapshot, root, index, categories, visibleCategories, filter, collapsed, inlineEditFor, inlineSubFor,
-    today, deviceId, revision, dirty,
+    today, deviceId, revision, dirty, sortByPriority,
     todayNodes, stats, visibleNodes, currentCategory,
     load, createTop, createSub, rename, setPriority, setCategory, toggleDone, remove, addCategories,
-    setFilter, toggleCollapsed, markClean, refreshToday, resetToSeed, toSnapshotValue,
+    setFilter, setSortByPriority, toggleSortByPriority, toggleCollapsed, markClean, refreshToday, resetToSeed, toSnapshotValue,
     categoryTaskCount, categoryOpenCount, removeCategory,
   }
 })

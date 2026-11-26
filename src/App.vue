@@ -36,6 +36,7 @@ async function bootstrap(): Promise<void> {
     ? result.value
     : emptySnapshot()
   tasks.load(snapshot)
+  tasks.setSortByPriority(settings.settings.sortByPriority)
   tasks.refreshToday()
 }
 

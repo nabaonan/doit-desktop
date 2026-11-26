@@ -75,6 +75,18 @@ export function showInToday(n: TaskNode, filter: string, today: number): boolean
   return !n.done || isSameDay(n.completedAt, today)
 }
 
+/**
+ * 今日待办的「按优先级排序」：只重排传入的顶级任务，子任务顺序原样保留。
+ * 优先级 4（紧急）→ 0（不设），同优先级保持原有顺序（稳定排序）；返回新数组，不改入参。
+ */
+export function sortTopByPriority(nodes: TaskNode[], enabled: boolean): TaskNode[] {
+  if (!enabled) return nodes
+  return nodes
+    .map((node, index) => ({ node, index }))
+    .sort((a, b) => (b.node.priority - a.node.priority) || (a.index - b.index))
+    .map(({ node }) => node)
+}
+
 /** 顶栏进度环恒按「今日全部」口径，与分类筛选解耦。 */
 export function todayStats(root: TaskNode[], today: number): { total: number; done: number; remaining: number } {
   const todayNodes = root.filter((n) => showInToday(n, 'all', today))

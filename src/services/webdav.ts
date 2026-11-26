@@ -12,9 +12,16 @@ export function mergeWithRemote(
   now = Date.now(),
 ): MergeResult {
   if (isStaleRemote(remote, local)) {
+    // 陈旧远端不能整体覆盖本地，但"远端独有且本地连墓碑都没有"的任务仍然要保留，
+    // 否则 TUI 等端刚新增的任务会因 exportedAt/revision 落后被永久丢掉。
+    const localUids = new Set(local.tasks.map((t) => t.uid))
+    const extra = remote.tasks.filter((t) => !localUids.has(t.uid))
+    const snapshot: SnapshotV2 = extra.length
+      ? { ...local, tasks: [...local.tasks, ...extra] }
+      : local
     return {
-      snapshot: local,
-      changed: 0,
+      snapshot,
+      changed: extra.length,
       putRequired: true,
       conflicts: [{ uid: '*', field: 'snapshot', local: local.revision, remote: remote.revision, winner: 'local' }],
     }
