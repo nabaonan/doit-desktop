@@ -155,6 +155,7 @@ off → error → syncing → ready → dirty → synced
 
 - `showInToday()` 只算顶级非墓碑任务：`!done || completedAt` 与今天同一本地日
 - `sortTopByPriority()` 仅重排今日列表的**顶级**任务（4→0，稳定排序），子任务顺序与引用不动；开关 `settings.sortByPriority` 是本地 UI 偏好，不进同步快照
+- 「紧急优先」开关在 `StatusPills.vue` 顶栏同步胶囊**左侧**（仅 `page === 'today'` 显示），用 `var(--prio-urgent)` 红色，不放进分类导航；窄屏隐藏文字只留旗标 + tooltip
 - 顶栏进度环恒用 `'all'` 口径，与分类筛选解耦
 - `completedTop()` 只数区间内已完成的顶级非墓碑任务；week=7 / month=30 / year=365 天（含今天）
 - `categoryShare()` 必须给全部分类补 0；已删分类若区间内仍有完成记录则保留

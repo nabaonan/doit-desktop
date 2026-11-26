@@ -12,7 +12,7 @@ defineProps<{ page: PageId }>()
     <div class="tb-inner">
       <Brand />
       <NavTabs :page="page" />
-      <StatusPills />
+      <StatusPills :page="page" />
     </div>
   </header>
 </template>

@@ -7,6 +7,9 @@ import Icon from '@/components/ui/Icon.vue'
 import UiTooltip from '@/components/ui/UiTooltip.vue'
 import TodayRing from './TodayRing.vue'
 import { fmtMD } from '@/domain/date'
+import type { PageId } from '@/domain/types'
+
+defineProps<{ page: PageId }>()
 
 const tasks = useTaskStore()
 const sync = useSyncStore()
@@ -15,6 +18,10 @@ const router = useRouter()
 const now = new Date()
 const weekday = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()]
 const dateLabel = `${fmtMD(now)} 周${weekday}`
+
+const sortTip = computed(() => tasks.sortByPriority
+  ? '已按优先级排序顶级任务 · 点击恢复手动顺序'
+  : '按优先级排序顶级任务（紧急在最前，子任务顺序不变）')
 
 const syncMeta = computed(() => {
   switch (sync.kind) {
@@ -34,6 +41,18 @@ function goToday(): void {
 
 <template>
   <div class="tb-pills">
+    <UiTooltip v-if="page === 'today'" :text="sortTip">
+      <button
+        type="button"
+        class="tb-pill sort-priority clickable"
+        :class="{ active: tasks.sortByPriority }"
+        :aria-pressed="tasks.sortByPriority"
+        @click="tasks.toggleSortByPriority()"
+      >
+        <Icon name="flag" :size="16" cls="flag" />
+        <span class="txt">紧急优先</span>
+      </button>
+    </UiTooltip>
     <UiTooltip :text="syncMeta.tip">
       <div
         class="tb-pill sync-status clickable"
