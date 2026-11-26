@@ -5,7 +5,12 @@ import { emptySnapshot } from '@/domain/snapshot'
 
 vi.mock('@/services/persistence', () => ({ scheduleSave: vi.fn(), flushSave: vi.fn() }))
 
-const completedAt = new Date('2026-11-26T00:00:00+08:00').getTime()
+// 全部时间用本地时区的 Date 构造器 / startOfDay() 动态推导，而不是写死 +08:00：
+// startOfToday()/isSameDay() 都按本地时区取当天，测试数据必须同口径，
+// 否则 CI（UTC）与本机（GMT+8）算出的「今天」会错开一天导致假失败。
+const at = (day: number, h: number, m: number, s: number): number =>
+  new Date(2026, 10, day, h, m, s).getTime()
+const completedAt = at(26, 0, 1, 0) // 11-26 完成
 
 function loadOneCompletedTask(store: ReturnType<typeof useTaskStore>): void {
   store.load({
@@ -30,7 +35,7 @@ function loadOneCompletedTask(store: ReturnType<typeof useTaskStore>): void {
 describe('今日口径跨午夜刷新', () => {
   beforeEach(() => {
     vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-11-26T23:59:30+08:00'))
+    vi.setSystemTime(at(26, 23, 59, 30))
     setActivePinia(createPinia())
   })
 
@@ -45,7 +50,7 @@ describe('今日口径跨午夜刷新', () => {
     expect(store.todayNodes).toHaveLength(1)
 
     // 跨到 11-27：不调用 refreshToday 时 today 仍是昨天（旧行为，差异来源）
-    vi.setSystemTime(new Date('2026-11-27T00:00:30+08:00'))
+    vi.setSystemTime(at(27, 0, 0, 30))
     expect(store.visibleNodes.map((n) => n.uid)).toEqual(['v1-2'])
 
     // App.vue 的定时器 / 焦点 / 可见性事件调用 refreshToday 后归档
@@ -82,7 +87,7 @@ describe('今日口径跨午夜刷新', () => {
         sortOrder: 0,
       }],
     })
-    vi.setSystemTime(new Date('2026-11-28T00:00:30+08:00'))
+    vi.setSystemTime(at(28, 0, 0, 30))
     store.refreshToday()
     expect(store.visibleNodes.map((n) => n.uid)).toEqual(['pending'])
   })
