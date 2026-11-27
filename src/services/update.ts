@@ -50,11 +50,18 @@ export interface DownloadCallbacks {
   onDone: (path: string) => void
 }
 
-/** 下载安装包：监听 update://progress 事件更新进度，完成后返回本地路径。 */
+/**
+ * 下载安装包：监听 update://progress 事件更新进度，完成后返回本地路径字符串。
+ *
+ * 注意：Rust 的 `download_update` 命令成功时返回的是**路径字符串**（CmdResult<String>），
+ * 不是 `{ path }` 对象。历史上这里按 `{ path: string }` 标注，导致调用方
+ * `result.value.path.replace(...)` 抛 `undefined is not an object`。这里做归一化，
+ * 同时兼容未来可能改成 `{ path }` 结构的情况，调用方永远拿到 string 路径。
+ */
 export async function downloadUpdate(
   url: string,
   cb: DownloadCallbacks,
-): Promise<Result<{ path: string }>> {
+): Promise<Result<string>> {
   let unlisten: (() => void) | undefined
   try {
     unlisten = await listen<DownloadProgress>('update://progress', (event) => {
@@ -62,11 +69,14 @@ export async function downloadUpdate(
       if (p.phase === 'done' && p.path) cb.onDone(p.path)
       cb.onProgress(p.received, p.total || 0)
     })
-    const result = await invokeCommand<{ path: string }>('download_update', { url })
+    const result = await invokeCommand<string | { path?: string }>('download_update', { url })
     if (!result.ok) {
       cb.onProgress(0, 0)
+      return result
     }
-    return result
+    const raw = result.value
+    const path = typeof raw === 'string' ? raw : (raw?.path ?? '')
+    return { ok: true, value: path }
   } finally {
     unlisten?.()
   }

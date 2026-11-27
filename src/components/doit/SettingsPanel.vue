@@ -150,7 +150,7 @@ async function runDownload(): Promise<void> {
       downloading.value = false
       return
     }
-    ui.notify(`已下载：${result.value.path.replace(/^.*\//, '')}`)
+    ui.notify(`已下载：${result.value.replace(/^.*\//, '')}`)
     downloading.value = false
   } catch (e) {
     ui.notify(`下载失败：${e instanceof Error ? e.message : String(e)}`)
