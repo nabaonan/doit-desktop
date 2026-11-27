@@ -1,6 +1,6 @@
 [package]
 name = "doit-desktop"
-version = "0.1.10"
+version = "0.1.11"
 description = "doit 桌面端 companion（Vue 3 前端 + Tauri 2 壳）"
 edition = "2021"
 rust-version = "1.77.2"
