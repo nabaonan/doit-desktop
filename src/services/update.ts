@@ -40,6 +40,14 @@ export function hasUpdate(current: string, latest: string): boolean {
   return compareVersions(current, latest) < 0
 }
 
+/** 统一显示格式：永远只带一个 v 前缀。
+ * GitHub tag_name 自带 v（v0.1.10），而 Cargo/app_metadata 版本不带 v（0.1.10），
+ * 各显示点直接拼 'v' 就会出现「vv0.1.10」。
+ */
+export function displayVersion(v: string): string {
+  return `v${(v || '').replace(/^v+/i, '')}`
+}
+
 /** 检查更新：查 GitHub Releases API，仓库公开后匿名即可使用，无需 Token。 */
 export async function checkForUpdate(): Promise<Result<CheckUpdateResult>> {
   return invokeCommand<CheckUpdateResult>('check_update', {})

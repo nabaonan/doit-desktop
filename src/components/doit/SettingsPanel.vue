@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { invokeCommand, isTauri } from '@/services/ipc'
 import {
-  checkForUpdate, compareVersions, downloadUpdate, hasUpdate,
+  checkForUpdate, compareVersions, displayVersion, downloadUpdate, hasUpdate,
 } from '@/services/update'
 import type { CheckUpdateResult } from '@/services/update'
 import UiSwitch from '@/components/ui/UiSwitch.vue'
@@ -117,7 +117,7 @@ async function checkUpdate(): Promise<void> {
     const info = result.value
     updateInfo.value = info
     if (!hasUpdate(currentVersion.value, info.latestTag)) {
-      ui.notify(`已是最新版本（v${currentVersion.value}）`)
+      ui.notify(`已是最新版本（${displayVersion(currentVersion.value)}）`)
       updateInfo.value = null
     }
   } catch (e) {
@@ -255,7 +255,7 @@ function openReleases(): void {
         <label>版本</label>
         <div class="about-ver">
           <div class="about-ver-top">
-            <span>doit-desktop v{{ currentVersion }} · 数据契约 v2</span>
+            <span>doit-desktop {{ displayVersion(currentVersion) }} · 数据契约 v2</span>
             <button class="btn ghost" :disabled="checkingUpdate || downloading" @click="checkUpdate">
               {{ checkingUpdate ? '检查中…' : '检查更新' }}
             </button>
@@ -266,7 +266,7 @@ function openReleases(): void {
       <div v-if="updateInfo || downloading || dlPath" class="field" style="border: none; padding-top: 0">
         <div class="update-box">
           <div v-if="updateInfo" class="update-tip">
-            发现新版本 <b>v{{ updateInfo.latestTag }}</b>
+            发现新版本 <b>{{ displayVersion(updateInfo.latestTag) }}</b>
             <span v-if="updateInfo.asset" class="update-hint">（{{ updateInfo.asset.name }}）</span>
           </div>
 

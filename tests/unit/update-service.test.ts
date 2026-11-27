@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { invokeCommand } from '@/services/ipc'
 import { listen } from '@tauri-apps/api/event'
-import { compareVersions, downloadUpdate, hasUpdate } from '@/services/update'
+import { compareVersions, displayVersion, downloadUpdate, hasUpdate } from '@/services/update'
 
 // downloadUpdate 依赖 Tauri IPC 与进度事件；这里直接模拟两者，验证返回值归一化。
 vi.mock('@/services/ipc', () => ({ invokeCommand: vi.fn() }))
@@ -9,6 +9,15 @@ vi.mock('@tauri-apps/api/event', () => ({ listen: vi.fn() }))
 
 const DL_URL = 'https://github.com/nabaonan/doit-desktop/releases/download/v0.1.10/doit-desktop_0.1.10_aarch64.dmg'
 const DL_PATH = '/Users/naban/Library/Caches/com.doit.desktop/update/doit-desktop_0.1.10_aarch64.dmg'
+
+describe('displayVersion 版本号显示', () => {
+  it('GitHub tag 自带 v 时不重复拼 v', () => {
+    expect(displayVersion('v0.1.10')).toBe('v0.1.10')
+    expect(displayVersion('0.1.10')).toBe('v0.1.10')
+    expect(displayVersion('vv1.2.3')).toBe('v1.2.3')
+    expect(displayVersion('')).toBe('v')
+  })
+})
 
 describe('downloadUpdate 返回值归一化', () => {
   beforeEach(() => {
